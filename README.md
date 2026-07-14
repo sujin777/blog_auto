@@ -76,7 +76,22 @@ blog_auto/
 
 ## 🚀 실행 및 테스트 방법
 
-### 환경 변수 세팅 (`.env`)
+### 1. 의존성 설치 (Dependencies)
+이 프로젝트는 Node.js와 Python(Playwright 제어용)을 함께 활용합니다. 다른 환경에서 새로 다운로드하여 실행할 때는 아래 명령어를 통해 필요한 라이브러리를 모두 설치해 줍니다.
+
+**Node.js 패키지 설치 (npm)**
+```bash
+npm install
+```
+(이 명령어를 실행하면 `package.json`에 명시된 `axios`와 `form-data` 라이브러리가 포함된 `node_modules` 폴더가 자동으로 생성되고 설치됩니다.)
+
+**Python 패키지 & Playwright 브라우저 설치**
+```bash
+pip install playwright
+playwright install chromium
+```
+
+### 2. 환경 변수 세팅 (`.env`)
 프로젝트 루트 경로에 `.env` 파일을 생성하고 아래와 같이 환경 변수를 입력합니다.
 ```env
 APIFY_TOKEN_REDDIT=your_apify_token_here
