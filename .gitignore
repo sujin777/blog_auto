@@ -1,0 +1,15 @@
+# Dependencies
+node_modules/
+
+# API keys and credentials
+.env
+.env.*
+*.local
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Temp and Scratch directories
+scratch/
+output/
