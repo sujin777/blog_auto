@@ -100,6 +100,23 @@ TISTORY_BLOG_NAME=your_tistory_blog_name
 - `APIFY_TOKEN_REDDIT`: Apify API 토큰
 - `TISTORY_BLOG_NAME`: 티스토리 블로그 서브도메인 이름 (예: `your-blog.tistory.com`인 경우 `your-blog` 입력)
 
+### 3. NotebookLM MCP 연동 설정
+이 프로젝트의 2단계 병렬 딥리서치 파이프라인은 에이전트 환경에 **NotebookLM MCP**가 연결되어 있어야 정상 기동됩니다.
+
+**MCP 설정 방법 (예: Claude Desktop / Antigravity IDE 설정)**
+에이전트의 MCP 설정 파일(예: `claude_desktop_config.json`)에 아래와 같이 `notebooklm-mcp` 설정을 추가하고 세션을 동기화합니다.
+```json
+{
+  "mcpServers": {
+    "notebooklm-mcp": {
+      "command": "node",
+      "args": ["/Users/gwn/.gemini/antigravity-ide/mcp/notebooklm-mcp/index.js"]
+    }
+  }
+}
+```
+* MCP 연동이 성공하면 AI 에이전트가 백그라운드에서 `notebook_create`, `research_start`, `notebook_query` 등의 도구를 사용해, 수집된 트렌드 정보를 바탕으로 고품질의 딥리서치 블로그 포스트를 병렬로 즉시 집필합니다.
+
 ### 통합 실증 러너 구동
 터미널에서 아래 명령을 실행하면 자동으로 Apify Scraper가 기동되어 데이터를 폴링하고, 최종 마크다운 아웃풋을 `output` 폴더에 생성합니다.
 ```bash
