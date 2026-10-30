@@ -147,7 +147,13 @@ def run(md_file, publish=False, headless=True):
             permissions=["clipboard-read", "clipboard-write"],
         )
         page = context.new_page()
-        page.on("dialog", lambda d: d.dismiss())
+        def on_dialog(d):
+            log(f"⚠️ 네이버 알림 대화상자 감지: [{d.type}] {d.message}")
+            try:
+                d.accept()
+            except Exception:
+                d.dismiss()
+        page.on("dialog", on_dialog)
 
         try:
             log("글쓰기 페이지 진입...")
@@ -238,10 +244,26 @@ def run(md_file, publish=False, headless=True):
                     page.wait_for_timeout(250)
                 log(f"태그 {min(len(tags), 10)}개 입력")
 
-            page.locator("button[class*='confirm_btn']").first.click()
-            page.wait_for_timeout(5000)
-            shot(page, "03_published.png", shots_dir)
-            log(f"🎉 발행 완료 → {page.url}")
+            confirm_btn = page.locator("button[class*='confirm_btn']").first
+            confirm_btn.scroll_into_view_if_needed()
+            confirm_btn.click(force=True)
+            log("최종 [발행] 확인 버튼 클릭 완료, 페이지 이동 대기 중...")
+            
+            # 실제 발행 완료(리다이렉트) 대기
+            try:
+                page.wait_for_url(lambda u: "postwrite" not in u and ("logNo=" in u or "PostView" in u), timeout=25000)
+                shot(page, "03_published.png", shots_dir)
+                log(f"🎉 네이버 블로그 최종 발행 완료! 확인 URL: {page.url}")
+            except Exception as wait_err:
+                shot(page, "03_publish_failed.png", shots_dir)
+                curr_url = page.url
+                captcha_elem = page.locator("input[placeholder*='보안문자'], .captcha_box, [class*='captcha']")
+                has_captcha = captcha_elem.count() > 0 and captcha_elem.first.is_visible()
+                err_box = page.locator(".se-popup, [class*='alert'], [class*='modal'], [class*='error']")
+                err_msg = err_box.first.inner_text().strip() if err_box.count() and err_box.first.is_visible() else "알 수 없는 에러"
+                if has_captcha:
+                    raise RuntimeError("🚨 네이버 보안문자(CAPTCHA) 감지! 클라우드 해외 IP 필터로 인해 발행 차단됨.")
+                raise RuntimeError(f"발행 실패: URL이 이동하지 않고 에디터에 머물러 있습니다. (현재 URL: {curr_url}, 팝업 메시지: {err_msg})")
         except Exception as e:
             log(f"❌ 에러: {e}")
             try:
