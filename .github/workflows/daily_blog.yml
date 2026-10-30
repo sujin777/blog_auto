@@ -22,7 +22,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
 
       - name: Install System Korean Fonts (for Playwright Card Rendering)
         run: |
@@ -32,7 +32,7 @@ jobs:
       - name: Install Dependencies
         run: |
           npm install
-          pip install playwright google-genai requests markdown pyperclip
+          pip install -r requirements.txt
           playwright install --with-deps chromium
 
       - name: Restore Naver Session
@@ -40,6 +40,7 @@ jobs:
           NAVER_SESSION_B64: ${{ secrets.NAVER_SESSION_B64 }}
         run: |
           if [ -n "$NAVER_SESSION_B64" ]; then
+            mkdir -p .agents/skills/publish-to-naver
             echo "$NAVER_SESSION_B64" | base64 -d > .agents/skills/publish-to-naver/naver_session.json
             echo "Naver session file restored successfully."
           fi
