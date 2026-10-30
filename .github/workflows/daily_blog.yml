@@ -1,0 +1,49 @@
+name: Daily Auto Blog Publisher
+
+on:
+  schedule:
+    # 매일 한국 시간(KST) 오전 8시 30분 실행 (UTC 23:30)
+    - cron: '30 23 * * *'
+  workflow_dispatch: # 수동 즉시 실행 지원
+
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Dependencies
+        run: |
+          npm install
+          pip install playwright google-genai requests markdown pyperclip
+          playwright install --with-deps chromium
+
+      - name: Restore Naver Session
+        env:
+          NAVER_SESSION_B64: ${{ secrets.NAVER_SESSION_B64 }}
+        run: |
+          if [ -n "$NAVER_SESSION_B64" ]; then
+            echo "$NAVER_SESSION_B64" | base64 -d > .agents/skills/publish-to-naver/naver_session.json
+          fi
+
+      - name: Run Full Auto Pipeline
+        env:
+          APIFY_TOKEN_REDDIT: ${{ secrets.APIFY_TOKEN_REDDIT }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          NAVER_ID: ${{ secrets.NAVER_ID }}
+          NAVER_BLOG_ID: ${{ secrets.NAVER_BLOG_ID }}
+        run: |
+          python -u auto_pipeline.py
+

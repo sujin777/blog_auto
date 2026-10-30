@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Blog Auto Ingestion & Research Pipeline Monitor</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <div class="app-container">
+    <!-- Header -->
+    <header class="pipeline-header">
+      <div class="header-branding">
+        <div class="brand-badge">LIVE MONITOR</div>
+        <h1 class="pipeline-title">AI Blog Automation Ingestion Engine</h1>
+        <p class="pipeline-subtitle">r/ClaudeAI Reddit 트렌드 수집 &bull; 딥리서치 &bull; 네이버 블로그 SmartEditor ONE 자동 발행</p>
+      </div>
+      <div class="header-status-box">
+        <div class="status-indicator active">
+          <span class="pulsing-dot"></span>
+          <span class="status-text" id="liveStatusText">네이버 블로그 발행 완료 (총 6편 실시간 공개)</span>
+        </div>
+        <div class="target-blog-chip">
+          <span class="chip-label">TARGET BLOG</span>
+          <span class="chip-value">blog.naver.com/gogo351</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- Metrics Ribbon -->
+    <section class="metrics-grid">
+      <div class="metric-card">
+        <div class="metric-icon purple">📥</div>
+        <div class="metric-info">
+          <span class="metric-label">수집된 Reddit 핫이슈</span>
+          <div class="metric-value-row">
+            <span class="metric-value" id="collectedPostsCount">7</span>
+            <span class="metric-badge green">100% 완료</span>
+          </div>
+          <span class="metric-desc">r/ClaudeAI 일간 최고 추천 글</span>
+        </div>
+      </div>
+
+      <div class="metric-card">
+        <div class="metric-icon cyan">🔬</div>
+        <div class="metric-info">
+          <span class="metric-label">심층 리서치 소스</span>
+          <div class="metric-value-row">
+            <span class="metric-value" id="researchSourcesCount">29</span>
+            <span class="metric-badge green">3개 주제 완료</span>
+          </div>
+          <span class="metric-desc">arXiv 논문 및 공식 테크 가이드</span>
+        </div>
+      </div>
+
+      <div class="metric-card">
+        <div class="metric-icon amber">🎨</div>
+        <div class="metric-info">
+          <span class="metric-label">생성된 시각 에셋</span>
+          <div class="metric-value-row">
+            <span class="metric-value" id="generatedAssetsCount">12</span>
+            <span class="metric-badge blue">1:1 고화질</span>
+          </div>
+          <span class="metric-desc">대표 삽화 3장 &bull; 학술 도해 9장</span>
+        </div>
+      </div>
+
+      <div class="metric-card">
+        <div class="metric-icon emerald">🚀</div>
+        <div class="metric-info">
+          <span class="metric-label">네이버 블로그 포스트</span>
+          <div class="metric-value-row">
+            <span class="metric-value" id="readyPostsCount">6</span>
+            <span class="metric-badge green">발행 완료</span>
+          </div>
+          <span class="metric-desc">blog.naver.com/gogo351</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Navigation Tabs -->
+    <nav class="pipeline-tabs" id="pipelineNavTabs">
+      <button class="tab-btn active" data-tab="overviewTab" id="tabBtnOverview">
+        <span class="tab-icon">⚡</span> 파이프라인 단계 현황
+      </button>
+      <button class="tab-btn" data-tab="redditTab" id="tabBtnReddit">
+        <span class="tab-icon">🔥</span> 수집 핫이슈 (7선)
+      </button>
+      <button class="tab-btn" data-tab="postsTab" id="tabBtnPosts">
+        <span class="tab-icon">✍️</span> 완성된 블로그 글 (3선)
+      </button>
+      <button class="tab-btn" data-tab="galleryTab" id="tabBtnGallery">
+        <span class="tab-icon">🖼️</span> 학술 도해 및 이미지 갤러리 (24장)
+      </button>
+      <button class="tab-btn" data-tab="publishTab" id="tabBtnPublish">
+        <span class="tab-icon">📤</span> 네이버 블로그 발행 제어
+      </button>
+    </nav>
+
+    <!-- Main Content Tab Panes -->
+    <main class="tab-content-container">
+      <!-- Tab 1: Overview & Flow -->
+      <section class="tab-pane active" id="overviewTab">
+        <div class="flow-card">
+          <h2 class="card-title">엔드투엔드 파이프라인 아키텍처 흐름</h2>
+          <div class="stepper-horizontal">
+            <div class="step-node completed">
+              <div class="node-circle">✓</div>
+              <div class="node-content">
+                <span class="node-tag">PHASE 1</span>
+                <h4 class="node-title">Reddit 핫이슈 수집</h4>
+                <p class="node-desc">Apify Actor로 지난 24시간 최고 인기글 7개 추출 &bull; ingest.md 3단 조립</p>
+                <span class="status-pill green">수집 완료</span>
+              </div>
+            </div>
+            <div class="step-connector completed"></div>
+
+            <div class="step-node completed">
+              <div class="node-circle">✓</div>
+              <div class="node-content">
+                <span class="node-tag">PHASE 2</span>
+                <h4 class="node-title">병렬 딥리서치 & 콘텐츠 빌드</h4>
+                <p class="node-desc">NotebookLM 가상 노트북 3개 생성, 웹 소스 29개 임포트 &bull; 비개발자 친화적 글 집필</p>
+                <span class="status-pill green">빌드 완료</span>
+              </div>
+            </div>
+            <div class="step-connector completed"></div>
+
+            <div class="step-node completed">
+              <div class="node-circle">✓</div>
+              <div class="node-content">
+                <span class="node-tag">PHASE 3</span>
+                <h4 class="node-title">네이버 블로그 SmartEditor ONE 자동 발행</h4>
+                <p class="node-desc">클립보드 HTML 주입 & 로컬 이미지 다이렉트 업로드 &bull; 무인 자동 공개 발행</p>
+                <span class="status-pill green">발행 완료</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="two-col-layout">
+          <div class="panel-card">
+            <h3 class="panel-title">🗓️ 현재 작업 세션 정보</h3>
+            <div class="key-value-list">
+              <div class="kv-item">
+                <span class="kv-key">세션 타임스탬프</span>
+                <span class="kv-val code">261025_0745 (KST)</span>
+              </div>
+              <div class="kv-item">
+                <span class="kv-key">아웃풋 디렉토리</span>
+                <span class="kv-val code">output/261025_0745/</span>
+              </div>
+              <div class="kv-item">
+                <span class="kv-key">인제스트 리포트</span>
+                <span class="kv-val highlight">ingest.md (3단 번역/5대질문 탑재)</span>
+              </div>
+              <div class="kv-item">
+                <span class="kv-key">네이버 블로그 ID</span>
+                <span class="kv-val highlight">gogo351 (blog.naver.com/gogo351)</span>
+              </div>
+              <div class="kv-item">
+                <span class="kv-key">발행 엔진</span>
+                <span class="kv-val code">SmartEditor ONE 무인 자동화</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="panel-card">
+            <h3 class="panel-title">🛡️ 안티그래비티 5대 엔지니어링 원칙 적용 현황</h3>
+            <div class="rule-checklist">
+              <div class="rule-item checked">
+                <span class="rule-check">✓</span>
+                <div>
+                  <strong>비개발자 친화적 서술</strong>: 실전 소스코드 전면 배제 및 한글 의사코드(Pseudocode) 대체 적용 완료
+                </div>
+              </div>
+              <div class="rule-item checked">
+                <span class="rule-check">✓</span>
+                <div>
+                  <strong>엄격한 학술 도해 규칙</strong>: 논문 스타일의 흑백/바이올렛 액센트 시스템 다이어그램 9장 생성
+                </div>
+              </div>
+              <div class="rule-item checked">
+                <span class="rule-check">✓</span>
+                <div>
+                  <strong>KST 시간대 정밀 보정</strong>: 타임존 시차 손실 없는 최신 24시간 인기글 100% 보존
+                </div>
+              </div>
+              <div class="rule-item checked">
+                <span class="rule-check">✓</span>
+                <div>
+                  <strong>네이버 스마트에디터 ONE 자동화</strong>: 클립보드 HTML 주입 및 로컬 이미지 다이렉트 업로드
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Tab 2: Reddit Collected Posts & Topic Planner -->
+      <section class="tab-pane" id="redditTab">
+        <!-- New Topic Input & Planner Box -->
+        <div class="topic-planner-box">
+          <div class="topic-planner-header">
+            <div>
+              <h3 class="topic-planner-title">💡 Reddit 핫이슈 기반 블로그 포스팅 주제 기획 & 주입 공간</h3>
+              <p class="topic-planner-desc">수집된 Reddit 글에서 영감을 얻은 핵심 주제를 직접 입력하거나, 새로운 블로그 포스팅 기획 주제를 등록하세요.</p>
+            </div>
+            <span class="badge-status-green">실시간 연동 모드</span>
+          </div>
+          <form class="topic-input-form" id="customTopicForm" onsubmit="event.preventDefault(); handleAddCustomTopic();">
+            <div class="topic-form-row">
+              <div class="form-group flex-2">
+                <label for="topicInputTitle">포스팅 기획 주제명</label>
+                <input type="text" id="topicInputTitle" placeholder="예: 구형 IoT 가전 역분석, LLM의 아첨 편향(Sycophancy) 극복기..." required>
+              </div>
+              <div class="form-group flex-1">
+                <label for="topicInputTag">카테고리 / 분야 태그</label>
+                <input type="text" id="topicInputTag" placeholder="예: 스마트홈, LLM 엔지니어링, 에듀테크...">
+              </div>
+              <div class="form-group flex-2">
+                <label for="topicInputMemo">핵심 타겟 독자 및 인사이트 요약</label>
+                <input type="text" id="topicInputMemo" placeholder="예: 비개발자도 이해할 수 있는 한글 의사코드와 도해로 구성">
+              </div>
+              <div class="form-group submit-group topic-btn-group">
+                <button type="button" class="btn-search-from-topic" id="btnSearchFromTopic" onclick="handleSearchFromTopic();" title="입력한 주제명으로 Reddit 핫이슈 재검색">
+                  <span>🔄 재검색</span>
+                </button>
+                <button type="submit" class="btn-add-topic" id="btnAddTopic">
+                  <span>+ 주제 등록하기</span>
+                </button>
+              </div>
+            </div>
+          </form>
+          <div class="active-topics-row" id="activeTopicsContainer">
+            <!-- Dynamically populated topic chips -->
+          </div>
+        </div>
+
+        <div class="section-header-row" style="margin-top: 2rem;">
+          <div>
+            <h2 class="card-title">수집된 Reddit r/ClaudeAI 인기 포스트</h2>
+            <span class="info-tag">출처: https://www.reddit.com/r/ClaudeAI/top/?t=day</span>
+          </div>
+          <button type="button" class="btn-refresh-reddit" id="btnRefreshReddit" onclick="handleRefreshRedditData();" title="수집된 Reddit 데이터 새로고침 및 재인덱싱">
+            <span class="refresh-icon">⚡</span>
+            <span>최신 핫이슈 새로고침</span>
+          </button>
+        </div>
+
+        <!-- 🔍 Reddit 핫이슈 주제 전용 검색 공간 -->
+        <div class="reddit-search-container" id="redditSearchContainer">
+          <div class="reddit-search-bar">
+            <span class="search-icon-symbol">🔍</span>
+            <input 
+              type="text" 
+              id="redditSearchInput" 
+              class="reddit-search-input" 
+              placeholder="검색할 핫이슈 주제명, 키워드 (예: 단일루프, 세탁기, Sycophancy, 밈, Katana, Anthropic...)" 
+              autocomplete="off"
+            >
+            <button type="button" class="btn-reddit-search" id="redditSearchBtn">
+              <span>🔍 주제로 검색</span>
+            </button>
+            <button type="button" class="btn-reddit-re-search" id="redditReSearchBtn" title="검색어 초기화 및 다시 검색">
+              <span>🔄 재검색</span>
+            </button>
+            <button type="button" class="btn-reddit-reset" id="redditSearchResetBtn" title="검색어 지우기">
+              <span>✕</span>
+            </button>
+          </div>
+          
+          <!-- 원클릭 빠른 재검색 키워드 태그 바 -->
+          <div class="quick-research-tags-row">
+            <span class="quick-research-label">⚡ 빠른 재검색:</span>
+            <div class="quick-tags-container">
+              <button type="button" class="quick-tag-btn active" onclick="handleRedditReSearch('');">전체보기</button>
+              <button type="button" class="quick-tag-btn" onclick="handleRedditReSearch('세탁기');">#구형세탁기 IoT</button>
+              <button type="button" class="quick-tag-btn" onclick="handleRedditReSearch('Sycophancy');">#아첨편향 Sycophancy</button>
+              <button type="button" class="quick-tag-btn" onclick="handleRedditReSearch('밈');">#밈 검색엔진 Memegle</button>
+              <button type="button" class="quick-tag-btn" onclick="handleRedditReSearch('단일루프');">#단일루프 에이전트</button>
+              <button type="button" class="quick-tag-btn" onclick="handleRedditReSearch('Anthropic');">#Anthropic 가이드</button>
+              <button type="button" class="quick-tag-btn" onclick="handleRedditReSearch('Katana');">#Katana</button>
+            </div>
+          </div>
+
+          <div class="search-meta-row">
+            <span class="search-result-count" id="redditSearchCountBadge">전체 7개 포스트 표시 중</span>
+            <span class="search-hint-text">💡 영문 원문 제목, 상세 요약, 매핑된 블로그 기획 주제명을 실시간으로 검색합니다.</span>
+          </div>
+        </div>
+
+        <div class="reddit-cards-grid" id="redditCardsContainer">
+          <!-- Dynamically populated via app.js -->
+        </div>
+      </section>
+
+      <!-- Tab 3: Completed Blog Posts Preview -->
+      <section class="tab-pane" id="postsTab">
+        <div class="posts-preview-layout">
+          <div class="posts-sidebar" id="postNavSidebar">
+            <!-- Dynamically populated post links -->
+          </div>
+          <div class="post-preview-content" id="postViewerContainer">
+            <!-- Dynamic Post Content Rendered -->
+          </div>
+        </div>
+      </section>
+
+      <!-- Tab 4: Visual Assets Gallery -->
+      <section class="tab-pane" id="galleryTab">
+        <div class="section-header-row">
+          <div>
+            <h2 class="card-title">생성된 시각 에셋 패키지 (대표 삽화 6장 &bull; 학술 도해 18장, 총 24장)</h2>
+            <p style="color: var(--text-dim); font-size: 0.85rem; margin-top: 0.25rem;">
+              논문 스타일의 학술 도해와 1:1 고해상도 인포그래픽 패키지입니다. 이미지를 클릭하면 고해상도 원본을 바로 확대해 볼 수 있습니다.
+            </p>
+          </div>
+          <div class="gallery-filters" id="galleryFilterBtns">
+            <!-- Dynamically populated via app.js with exact post topics -->
+          </div>
+        </div>
+        <div class="gallery-grid" id="assetsGalleryGrid">
+          <!-- Dynamically populated images -->
+        </div>
+      </section>
+
+      <!-- Tab 5: Tistory Publish Control -->
+      <!-- Tab 5: Naver Blog Publish Control -->
+      <section class="tab-pane" id="publishTab">
+        <div class="publish-control-card">
+          <div class="control-header">
+            <div>
+              <h2 class="card-title">네이버 블로그 SmartEditor ONE 자동 발행 컨트롤 타워</h2>
+              <p class="panel-desc">타겟 블로그 ID: <strong>gogo351</strong> (https://blog.naver.com/gogo351) | SmartEditor ONE 무인 자동화 엔진</p>
+            </div>
+            <div class="login-badge-status" id="loginStatusBadge">
+              <span class="status-dot green"></span>
+              <span id="loginBadgeText" style="color: #34d399; font-weight: 700;">네이버 세션 인증 완료 (gogo351)</span>
+            </div>
+          </div>
+
+          <div class="publish-queue-list">
+            <div class="queue-item">
+              <div class="queue-number">01</div>
+              <div class="queue-info">
+                <h4>10년 된 삼성 스마트 세탁기의 기적, Claude와 함께한 가전 부활 프로젝트</h4>
+                <p>삼성_스마트세탁기_부활_IoT_해킹.md &bull; 인포그래픽 4장 &bull; logNo=224452906663</p>
+              </div>
+              <div class="queue-schedule">
+                <span class="schedule-pill" style="background: rgba(16, 185, 129, 0.2); color: #34d399;">실시간 발행 완료</span>
+              </div>
+              <div class="queue-action">
+                <a href="https://blog.naver.com/PostView.naver?blogId=gogo351&Redirect=View&logNo=224452906663" target="_blank" rel="noopener" class="status-badge" style="background:#03c75a; color:#fff; text-decoration:none;">네이버 글 보기 &rarr;</a>
+              </div>
+            </div>
+
+            <div class="queue-item">
+              <div class="queue-number">02</div>
+              <div class="queue-info">
+                <h4>"네 말이 무조건 맞아"… AI의 아첨 편향(Sycophancy)과 비판적 사고 유도법</h4>
+                <p>AI_아첨편향_Sycophancy_극복전략.md &bull; 도해 4장 &bull; logNo=224452908200</p>
+              </div>
+              <div class="queue-schedule">
+                <span class="schedule-pill" style="background: rgba(16, 185, 129, 0.2); color: #34d399;">실시간 발행 완료</span>
+              </div>
+              <div class="queue-action">
+                <a href="https://blog.naver.com/PostView.naver?blogId=gogo351&Redirect=View&logNo=224452908200" target="_blank" rel="noopener" class="status-badge" style="background:#03c75a; color:#fff; text-decoration:none;">네이버 글 보기 &rarr;</a>
+              </div>
+            </div>
+
+            <div class="queue-item">
+              <div class="queue-number">03</div>
+              <div class="queue-info">
+                <h4>1인 개발자가 Claude로 만든 '밈 전용 구글' Memegle 아키텍처</h4>
+                <p>밈_검색엔진_Memegle_아키텍처.md &bull; 도해 4장 &bull; logNo=224452909737</p>
+              </div>
+              <div class="queue-schedule">
+                <span class="schedule-pill" style="background: rgba(16, 185, 129, 0.2); color: #34d399;">실시간 발행 완료</span>
+              </div>
+              <div class="queue-action">
+                <a href="https://blog.naver.com/PostView.naver?blogId=gogo351&Redirect=View&logNo=224452909737" target="_blank" rel="noopener" class="status-badge" style="background:#03c75a; color:#fff; text-decoration:none;">네이버 글 보기 &rarr;</a>
+              </div>
+            </div>
+
+            <div class="queue-item">
+              <div class="queue-number">04</div>
+              <div class="queue-info">
+                <h4>수십 개 서브에이전트의 종말, Anthropic이 단일 루프로 회귀한 진짜 이유</h4>
+                <p>단일_에이전트_루프_아키텍처.md &bull; 이미지 4장 &bull; logNo=224452965170</p>
+              </div>
+              <div class="queue-schedule">
+                <span class="schedule-pill" style="background: rgba(16, 185, 129, 0.2); color: #34d399;">실시간 발행 완료</span>
+              </div>
+              <div class="queue-action">
+                <a href="https://blog.naver.com/PostView.naver?blogId=gogo351&Redirect=View&logNo=224452965170" target="_blank" rel="noopener" class="status-badge" style="background:#03c75a; color:#fff; text-decoration:none;">네이버 글 보기 &rarr;</a>
+              </div>
+            </div>
+          </div>
+
+          <div class="publish-action-box">
+            <div class="action-instructions">
+              <strong>💡 네이버 블로그 무인 자동화 상태:</strong>
+              <p>네이버 스마트에디터 ONE 로그인 세션(<code>naver_session.json</code>)이 구축되어 있어, 별도의 브라우저 로그인 절차 없이 100% 무인으로 마크다운 본문 주입, 로컬 고화질 이미지 업로드, 태그 10개 입력, 공개 발행이 자동으로 수행됩니다.</p>
+            </div>
+            <div class="btn-group">
+              <a href="https://blog.naver.com/gogo351" target="_blank" rel="noopener" class="primary-action-btn" id="runPublishBtn" style="background: linear-gradient(135deg, #03c75a, #02b150); box-shadow: 0 4px 15px rgba(3, 199, 90, 0.35);">
+                🟢 네이버 블로그(gogo351) 바로가기 & 포스트 관리
+              </a>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- Modal for Image Preview -->
+    <div class="image-modal-overlay" id="imageModalOverlay">
+      <div class="image-modal-content">
+        <button class="modal-close-btn" id="modalCloseBtn" title="닫기 (ESC)">&times;</button>
+        <div class="modal-img-container">
+          <img src="" alt="Expanded View" id="modalImageElement">
+        </div>
+        <div class="modal-footer-bar">
+          <div class="modal-caption-bar" id="modalCaptionBar"></div>
+          <a href="#" target="_blank" rel="noopener" id="modalRawLink" class="modal-raw-btn">
+            🔍 새 탭에서 고화질 원본 보기 &rarr;
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="./app.js?v=20261025"></script>
+</body>
+</html>

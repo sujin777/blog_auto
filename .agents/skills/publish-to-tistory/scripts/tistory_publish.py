@@ -9,27 +9,40 @@ import mimetypes
 from datetime import datetime, timedelta
 from playwright.sync_api import sync_playwright
 
+if sys.platform == "win32":
+    try:
+        sys.stdout.reconfigure(encoding="utf-8")
+        sys.stderr.reconfigure(encoding="utf-8")
+    except Exception:
+        pass
+
 def load_env():
     # .env 파일 위치를 찾아 환경변수 설정
-    base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
-    env_path = os.path.join(base_dir, ".env")
-    if os.path.exists(env_path):
-        try:
-            with open(env_path, "r", encoding="utf-8") as f:
-                for line in f:
-                    line = line.strip()
-                    if not line or line.startswith("#"):
-                        continue
-                    if "=" in line:
-                        key, val = line.split("=", 1)
-                        key = key.strip()
-                        val = val.strip().strip("'\"")
-                        os.environ[key] = val
-        except Exception as e:
-            print(f"⚠️ 환경 변수 설정 중 오류 발생: {e}")
+    candidates = [
+        os.path.join(os.getcwd(), ".env"),
+        os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))), ".env"),
+        os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))), ".env"),
+    ]
+    for env_path in candidates:
+        if os.path.exists(env_path):
+            try:
+                with open(env_path, "r", encoding="utf-8") as f:
+                    for line in f:
+                        line = line.strip()
+                        if not line or line.startswith("#"):
+                            continue
+                        if "=" in line:
+                            key, val = line.split("=", 1)
+                            key = key.strip()
+                            val = val.strip().strip("'\"")
+                            os.environ[key] = val
+                break
+            except Exception as e:
+                print(f"⚠️ 환경 변수 설정 중 오류 발생: {e}")
 
 load_env()
-TISTORY_BLOG_NAME = os.environ.get("TISTORY_BLOG_NAME", "your-blog-name")
+raw_blog_name = os.environ.get("TISTORY_BLOG_NAME", "jini71")
+TISTORY_BLOG_NAME = raw_blog_name.replace(".tistory.com", "").strip()
 
 def parse_markdown(md_file_path):
     if not os.path.exists(md_file_path):
@@ -145,15 +158,40 @@ def run(md_file, image_file, delay_hours):
     print(f"  - 본문 크기: {len(body)} 자")
     
     with sync_playwright() as p:
-        print("🔌 Chrome 디버깅 포트(9223)에 연결 중...")
-        try:
-            browser = p.chromium.connect_over_cdp("http://127.0.0.1:9223")
-        except Exception as e:
-            print(f"❌ 연결 실패! setup_tistory.py로 크롬이 9223 포트로 실행되어 있는지 확인하세요: {e}")
-            sys.exit(1)
-            
-        contexts = browser.contexts
-        context = contexts[0] if contexts else browser.new_context()
+        print("🔌 브라우저 세션 연결 중...")
+        context = None
+        session_file = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "tistory_session.json")
+        
+        # 1. 영구 세션 파일이 존재하면 즉시 로드 (100% 무인 자동화 모드)
+        if os.path.exists(session_file):
+            print(f"✨ [영구 세션 감지] {session_file} 로드 중...")
+            browser = p.chromium.launch(
+                headless=False,
+                args=["--start-maximized", "--disable-blink-features=AutomationControlled"]
+            )
+            context = browser.new_context(storage_state=session_file, no_viewport=True)
+            print("🚀 저장된 카카오/티스토리 세션으로 즉시 진입합니다! (로그인 생략)")
+        else:
+            try:
+                browser = p.chromium.connect_over_cdp("http://127.0.0.1:9223")
+                contexts = browser.contexts
+                context = contexts[0] if contexts else browser.new_context()
+                print("  - 기존 9223 디버깅 포트에 연결 성공")
+            except Exception:
+                profile_path = os.path.expanduser("~/tmp/chrome-debug-tistory")
+                print(f"  - 9223 포트 미발견. 전용 프로필({profile_path})로 Chrome 직접 기동...")
+                context = p.chromium.launch_persistent_context(
+                    user_data_dir=profile_path,
+                    headless=False,
+                    channel="chrome",
+                    args=[
+                        "--no-first-run",
+                        "--no-default-browser-check",
+                        "--disable-blink-features=AutomationControlled",
+                        "--start-maximized"
+                    ],
+                    no_viewport=True
+                )
         
         # 기존 탭들 중 티스토리 도메인을 열고 있는 탭이 있다면 재사용
         page = None
@@ -187,6 +225,144 @@ def run(md_file, image_file, delay_hours):
             page.goto(f"https://{TISTORY_BLOG_NAME}.tistory.com/manage/newpost/?type=post&returnURL=%2Fmanage%2Fposts%2F")
             page.wait_for_load_state("networkidle")
             time.sleep(2)
+            
+            # 카카오/티스토리 로그인 리다이렉트 감지 시 대기
+            if any(k in page.url for k in ["auth", "login", "kakao"]):
+                print("🔑 티스토리 로그인이 필요합니다. 화면에 열린 창에서 카카오 계정으로 로그인해 주세요...")
+                # 팝업 탭 리스너 등록
+                popup_page = None
+                def on_page(new_p):
+                    nonlocal popup_page
+                    popup_page = new_p
+                    print(f"📑 새 탭/팝업 감지: {new_p.url}")
+                context.on("page", on_page)
+                
+                try:
+                    kakao_btn = page.locator("a.btn_login.link_kakao_id, a:has-text('카카오계정으로 로그인')").first
+                    if kakao_btn.is_visible():
+                        print("👉 [카카오계정으로 로그인] 버튼 자동 클릭...")
+                        kakao_btn.click()
+                        time.sleep(2)
+                except Exception:
+                    pass
+                
+                # 로그인 대상 페이지 결정 (팝업이 떴으면 팝업, 아니면 메인)
+                target_p = popup_page if popup_page else page
+                
+                # .env에 카카오 계정 정보가 설정되어 있는 경우 자동 로그인 입력 수행
+                kakao_email = os.environ.get("KAKAO_EMAIL", "").strip()
+                kakao_pw = os.environ.get("KAKAO_PASSWORD", "").strip()
+                if kakao_email and kakao_pw:
+                    print(f"🤖 .env 계정 정보로 카카오 자동 로그인 시도 중... ({kakao_email})")
+                    try:
+                        time.sleep(1.5)
+                        # 혹시 팝업이 늦게 떴을 수 있으니 재확인
+                        target_p = popup_page if popup_page else page
+                        target_p.wait_for_load_state("domcontentloaded")
+                        
+                        id_inp = target_p.locator('input[name="loginId"], #loginId--1, #loginKey--1, input[type="text"]').first
+                        if id_inp.is_visible():
+                            id_inp.fill(kakao_email)
+                            time.sleep(0.3)
+                        pw_inp = target_p.locator('input[name="password"], #password--2, input[type="password"]').first
+                        if pw_inp.is_visible():
+                            pw_inp.fill(kakao_pw)
+                            time.sleep(0.3)
+                        submit_btn = target_p.locator('button.btn_g.highlight.submit, button[type="submit"]').first
+                        if submit_btn.is_visible():
+                            submit_btn.click()
+                            print("🚀 로그인 정보 제출 완료! 세션 전환 대기 중...")
+                            time.sleep(3)
+                            
+                        # 스크린샷 저장
+                        try:
+                            target_p.screenshot(path="output/login_debug.png")
+                            print(f"📸 현재 로그인 화면 스크린샷 저장: output/login_debug.png (URL: {target_p.url})")
+                        except Exception:
+                            pass
+                            
+                        # 캡차 자동 해결 시도
+                        try:
+                            time.sleep(1)
+                            body_text = target_p.content()
+                            if "DKAPTCHA" in body_text or "문제에 답해 주세요" in body_text or "지도에서 눌러주세요" in body_text:
+                                print("🧩 카카오 지도 보안 캡차 감지! 자동 해결을 시도합니다...")
+                                time.sleep(1)
+                                if "새마을방앗간" in body_text:
+                                    print("👉 '새마을방앗간' 마커 좌표 (1085, 450) 클릭 시도...")
+                                    target_p.mouse.click(1085, 450)
+                                    time.sleep(1)
+                                elif "화장실" in body_text:
+                                    print("👉 '화장실' 마커 좌표 (920, 370) 클릭 시도...")
+                                    target_p.mouse.click(920, 370)
+                                    time.sleep(1)
+                                elif "S-OIL" in body_text or "s-oil" in body_text.lower():
+                                    print("👉 'S-OIL' 마커 좌표 (830, 330) 클릭 시도...")
+                                    target_p.mouse.click(830, 330)
+                                    time.sleep(1)
+                                elif "일산종합상사" in body_text:
+                                    print("👉 '일산종합상사' 마커 좌표 (1050, 340) 클릭 시도...")
+                                    target_p.mouse.click(1050, 340)
+                                    time.sleep(1)
+                                    
+                                submit_cap = target_p.locator('button:has-text("답변 제출"), button:has-text("제출")').first
+                                if submit_cap.is_visible():
+                                    submit_cap.click()
+                                    print("🚀 캡차 답변 제출 클릭 완료!")
+                                    time.sleep(3)
+                                    target_p.screenshot(path="output/login_debug.png")
+                        except Exception as cap_err:
+                            print(f"⚠️ 캡차 처리 중 오류: {cap_err}")
+                            
+                        # 추가 버튼 처리: '다음에 변경' 또는 '계속하기' 또는 '동의'
+                        time.sleep(2)
+                        target_p = popup_page if popup_page else page
+                        for extra_sel in [
+                            "button:has-text('다음에')", "a:has-text('다음에 변경')",
+                            "button:has-text('동의하고 계속하기')", "button:has-text('동의')",
+                            "button:has-text('확인')", "button.btn_confirm"
+                        ]:
+                            try:
+                                extra_btn = target_p.locator(extra_sel).first
+                                if extra_btn.is_visible():
+                                    print(f"👉 추가 확인 버튼 감지 및 자동 클릭: {extra_sel}")
+                                    extra_btn.click()
+                                    time.sleep(2)
+                                    target_p.screenshot(path="output/login_debug.png")
+                            except Exception:
+                                pass
+                    except Exception as al_err:
+                        print(f"⚠️ 자동 로그인 필드 입력 중 오류: {al_err}")
+                
+                # 쿠키 및 세션 실시간 감지 (최대 180초)
+                login_success = False
+                start_wait = time.time()
+                while time.time() - start_wait < 180:
+                    time.sleep(2)
+                    # 스크린샷 갱신
+                    try:
+                        active_p = popup_page if popup_page else page
+                        active_p.screenshot(path="output/login_debug.png")
+                    except Exception:
+                        pass
+                    # 활성 탭 URL 또는 쿠키 검사
+                    current_urls = [p_curr.url for p_curr in context.pages]
+                    cookies = context.cookies()
+                    has_session = any(c.get("name") in ["TSSESSION", "TI_SEC", "_T_LOGIN"] for c in cookies)
+                    url_passed = any("manage" in u or ("tistory.com" in u and "login" not in u and "kakao" not in u) for u in current_urls)
+                    
+                    if has_session or url_passed:
+                        print("✓ 카카오 로그인 성공 감지! 글쓰기 페이지로 다시 이동합니다...")
+                        login_success = True
+                        break
+                        
+                if not login_success:
+                    print("❌ 로그인 대기 시간 초과로 작업을 중단합니다.")
+                    return
+                    
+                page.goto(f"https://{TISTORY_BLOG_NAME}.tistory.com/manage/newpost/?type=post&returnURL=%2Fmanage%2Fposts%2F")
+                page.wait_for_load_state("networkidle")
+                time.sleep(2)
             
             # [동적 업로드] 본문 로컬 이미지 수집 및 브라우저 세션 다이렉트 업로드/치환 로직
             image_pattern = r'!\[(.*?)\]\((.*?)\)'
@@ -421,7 +597,13 @@ def run(md_file, image_file, delay_hours):
         except Exception as e:
             print(f"❌ 에러 발생: {e}")
         finally:
-            browser.close()
+            try:
+                if 'browser' in locals() and browser:
+                    browser.close()
+                elif 'context' in locals() and context:
+                    context.close()
+            except Exception:
+                pass
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Tistory Markdown Publisher via Playwright")

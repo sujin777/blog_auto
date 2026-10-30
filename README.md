@@ -20,6 +20,13 @@ blog_auto/
 │       │   ├── SKILL.md         # 🔬 NotebookLM 기반 병렬 딥리서치 가이드
 │       │   └── references/
 │       │       └── template_guide.md # 📋 비개발자 친화적 포스팅 레이아웃 가이드
+│       ├── publish-to-naver/
+│       │   ├── SKILL.md         # 🟢 네이버 블로그 SmartEditor ONE 자동 포스팅 가이드
+│       │   ├── naver_session.json # 🔑 네이버 영구 로그인 세션 파일
+│       │   └── scripts/         # 📤 네이버 자동 로그인 및 스마트에디터 발행 스크립트
+│       │       ├── naver_login.py
+│       │       ├── naver_publish.py
+│       │       └── naver_publish_all.py
 │       └── publish-to-tistory/
 │           ├── SKILL.md         # 📝 티스토리 자동 포스팅 스킬 명세 가이드
 │           └── scripts/         # 📤 티스토리 자동 기동, 업로더 및 포스팅 스크립트

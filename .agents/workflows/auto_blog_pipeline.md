@@ -1,11 +1,11 @@
 ---
 name: auto_blog_pipeline
-description: r/ClaudeAI 인기 포스트 수집(ingest-reddit-posts), 상위 주제별 병렬 딥리서치 및 블로그 포스트 생성(deep_research), 그리고 티스토리 자동 업로드 및 예약 발행(publish-to-tistory)을 하나로 연결하는 엔드투엔드 블로그 자동화 파이프라인 워크플로우입니다.
+description: r/ClaudeAI 인기 포스트 수집(ingest-reddit-posts), 상위 주제별 병렬 딥리서치 및 블로그 포스트 생성(deep_research), 그리고 네이버 블로그(SmartEditor ONE) 자동 포스팅 및 발행(publish-to-naver)을 하나로 연결하는 엔드투엔드 블로그 자동화 파이프라인 워크플로우입니다.
 ---
 
-# 🤖 Tistory AI 블로그 자동화 파이프라인 (auto_blog_pipeline)
+# 🤖 AI 블로그 자동화 파이프라인 (auto_blog_pipeline)
 
-이 워크플로우는 Reddit에서 최신 인기 포스트를 수집하고, AI 심층 리서치(Deep Research)를 수행하여 고품질 포스트를 제작한 뒤, 티스토리(Tistory) 블로그에 자동으로 이미지를 업로드하고 본문을 발행하는 전체 파이프라인을 끊김 없이 연속으로 실행하기 위한 명세서입니다.
+이 워크플로우는 Reddit에서 최신 인기 포스트를 수집하고, AI 심층 리서치(Deep Research)를 수행하여 고품질 포스트를 제작한 뒤, **네이버 블로그(SmartEditor ONE)**에 자동으로 이미지를 업로드하고 본문을 발행하는 전체 파이프라인을 끊김 없이 연속으로 실행하기 위한 명세서입니다. (티스토리 듀얼 지원)
 
 ---
 
@@ -14,8 +14,8 @@ description: r/ClaudeAI 인기 포스트 수집(ingest-reddit-posts), 상위 주
 ```mermaid
 graph TD
     A["1단계: Reddit 포스트 수집<br>(/ingest-reddit-posts)"] -->|ingest.md & 폴더 생성| B["2단계: 병렬 딥리서치 & 포스트 생성<br>(/deep_research)"]
-    B -->|{주제}.md & {주제}/ 이미지 폴더 생성| C["3단계: 티스토리 이미지 업로드 & 포스트 발행<br>(/publish-to-tistory)"]
-    C -->|완료| D["🎉 최종 예약/즉시 발행 완료"]
+    B -->|{주제}.md & {주제}/ 이미지 폴더 생성| C["3단계: 네이버 블로그 자동 업로드 & 포스트 발행<br>(/publish-to-naver)"]
+    C -->|완료| D["🎉 최종 네이버 블로그 즉시/임시저장 발행 완료"]
 ```
 
 ---
@@ -38,39 +38,32 @@ graph TD
    * 저장 경로: `output/{YYMMDD_HHMM}/{주제}.md`
    * 이미지 경로: `output/{YYMMDD_HHMM}/{주제}/{이미지_이름}.png`
 
-### Phase 3: 티스토리 자동 업로드 및 예약 발행 (`/publish-to-tistory`)
-1. **사전 준비**: 로컬 크롬 디버깅 포트(9223) 세션을 실행하고 티스토리 로그인 상태를 점검합니다.
+### Phase 3: 네이버 블로그 자동 업로드 및 발행 (`/publish-to-naver`)
+1. **사전 준비**: 1회용 브라우저 세션을 실행하여 네이버 로그인 및 세션 파일(`naver_session.json`)을 적재합니다. (최초 1회만 수행)
    ```bash
-   python .agents/skills/publish-to-tistory/scripts/setup_tistory.py
+   naver_login.bat
+   # 또는 python .agents/skills/publish-to-naver/scripts/naver_login.py
    ```
-2. **1단계: 본문 이미지 일괄 업로드 및 마크다운 치환**:
-   각 포스트별로 본문에 삽입된 로컬 이미지들을 티스토리 API(`attach.json`)를 통해 일괄 업로드하고 카카오 CDN 치환 태그(`[##_Image|...|_##]`)로 본문을 자동 치환합니다.
+2. **SmartEditor ONE 자동 본문 주입 및 이미지 첨부 발행**:
+   각 포스트별 마크다운을 네이버 에디터용 HTML로 변환하여 주입하고, 로컬 다이어그램 삽화들을 `file_chooser`로 자동 첨부한 뒤 태그 입력 및 최종 공개 발행을 수행합니다.
    ```bash
-   # 예시: 특정 포스트 이미지 업로드
-   node .agents/skills/publish-to-tistory/scripts/upload_images.js --md-file "output/{YYMMDD_HHMM}/{주제}.md"
-   ```
-   * 실행 후 치환된 파일인 `output/{YYMMDD_HHMM}/{주제}_replaced.md`가 자동 생성됩니다.
-3. **2단계: 에디터 본문 주입 및 예약 발행**:
-   Playwright를 사용하여 치환 완료된 본문을 주입하고, 대표 썸네일 이미지를 업로드한 뒤 지정된 시간 간격(예: 1번째 글은 2시간 후, 2번째 글은 4시간 후, 3번째 글은 6시간 후)으로 예약 발행을 완료합니다.
-   ```bash
-   # 예시: 1번째 주제 - 2시간 후 예약 발행
-   python .agents/skills/publish-to-tistory/scripts/tistory_publish.py \
-     --md-file "output/{YYMMDD_HHMM}/{주제}_replaced.md" \
-     --image "output/{YYMMDD_HHMM}/{주제}/{대표이미지}.png" \
-     --delay-hours 2
+   # 예시: 1번째 주제 발행 (--publish 옵션 시 즉시 공개 발행, 미지정 시 임시저장)
+   python .agents/skills/publish-to-naver/scripts/naver_publish.py \
+     --md-file "output/{YYMMDD_HHMM}/{주제}.md" \
+     --publish --headed
 
-   # 예시: 2번째 주제 - 4시간 후 예약 발행
-   python .agents/skills/publish-to-tistory/scripts/tistory_publish.py \
-     --md-file "output/{YYMMDD_HHMM}/{주제}_replaced.md" \
-     --image "output/{YYMMDD_HHMM}/{주제}/{대표이미지}.png" \
-     --delay-hours 4
+   # 예시: 2번째 주제 발행
+   python .agents/skills/publish-to-naver/scripts/naver_publish.py \
+     --md-file "output/{YYMMDD_HHMM}/{주제}.md" \
+     --publish --headed
 
-   # 예시: 3번째 주제 - 6시간 후 예약 발행
-   python .agents/skills/publish-to-tistory/scripts/tistory_publish.py \
-     --md-file "output/{YYMMDD_HHMM}/{주제}_replaced.md" \
-     --image "output/{YYMMDD_HHMM}/{주제}/{대표이미지}.png" \
-     --delay-hours 6
+   # 예시: 3번째 주제 발행
+   python .agents/skills/publish-to-naver/scripts/naver_publish.py \
+     --md-file "output/{YYMMDD_HHMM}/{주제}.md" \
+     --publish --headed
    ```
+
+> **참고**: 티스토리 블로그 발행을 원하는 경우 `.agents/skills/publish-to-tistory` 스킬을 사용하여 듀얼 발행도 가능합니다.
 
 ---
 

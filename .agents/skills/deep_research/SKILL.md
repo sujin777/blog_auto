@@ -62,7 +62,7 @@ description: NotebookLM MCP를 연결하여 주어진 주제에 대해 심층 �
   1. 정부 부처 및 공식 기관 (예: Gartner, IDC, McKinsey, 세계은행 등)
   2. 글로벌 빅테크 및 전문 기술 매체 (예: TechCrunch, VentureBeat 등)
 - **전문 용어 병기**: 리서치 보고서 내의 중요 기술 용어 및 고유 명사는 반드시 영어 원어를 괄호 `()` 안에 함께 표기하여 슬라이드의 전문성을 높입니다.
-- **도구 절대 경로**: NotebookLM MCP를 직접 셸(Shell)이나 코드로 제어할 때, 명령어는 반드시 `/Users/gwn/.local/bin/nlm` 절대 경로를 명시해야 합니다.
+- **도구 실행 경로**: NotebookLM MCP 또는 CLI를 직접 제어할 때, 전역 명령어 `nlm` (또는 Windows의 경우 `C:\Users\jin81\AppData\Local\Programs\Python\Python311\Scripts\nlm.exe`, Mac/Linux는 `~/.local/bin/nlm`)을 사용합니다.
 - **동기화 신뢰성**: 리서치가 완료될 때까지 상태를 반드시 검증하며, 중도 실패나 타임아웃 발생 시 원인을 구체적으로 파악하고 해결책을 제시합니다.
 - **모드**: 별도 요청이 없는 한 항상 `--mode deep`을 사용하여 딥 리서치를 기동합니다.
 

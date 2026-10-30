@@ -1,0 +1,50 @@
+[
+  {
+    "id": 1,
+    "title": "10년 된 구형 스마트 세탁기 IoT 리버스 엔지니어링",
+    "tag": "스마트홈",
+    "memo": "비개발자 친화적 통신 패킷 역분석 & SmartThings 부활기"
+  },
+  {
+    "id": 2,
+    "title": "골든 리트리버형 LLM의 아첨 편향(Sycophancy) 극복 전략",
+    "tag": "AI 엔지니어링",
+    "memo": "RLHF 보상 해킹 원인 분석 및 악마의 변호인 프롬프트 가드레일"
+  },
+  {
+    "id": 3,
+    "title": "1인 개발자의 오픈소스 밈 전용 검색엔진 Memegle 아키텍처",
+    "tag": "바이브코딩",
+    "memo": "Reddit/Bluesky/Mastodon 실시간 크롤링 & 서버리스 호스팅"
+  },
+  {
+    "id": 4,
+    "title": "기업용 LLM 데이터 보안 거버넌스 및 Zero Data Retention(ZDR) 아키텍처",
+    "tag": "보안/거버넌스",
+    "memo": "Anthropic 보안 책임자 성명서 분석 & 프라이버시 보호 가이드"
+  },
+  {
+    "id": 5,
+    "title": "수십 개 서브에이전트의 종말, Anthropic이 단일 루프로 회귀한 진짜 이유",
+    "tag": "에이전트",
+    "memo": "단일 메인 루프와 온디맨드 스킬 검색 체계로 회귀 권장"
+  },
+  {
+    "id": 6,
+    "title": "인스타그램을 뒤흔든 AI 3D 모션 그래픽, Claude와 Katana의 비밀 파이프라인",
+    "tag": "AI 모션그래픽",
+    "memo": "Claude 3D 벡터 코드와 Higgsfield Katana 신경망 렌더링 결합"
+  },
+  {
+    "id": 7,
+    "title": "Opus 5.5 무제한 플랜 활용법: 상위 1% 엔지니어의 대규모 코드 리팩토링",
+    "tag": "대규모 엔지니어링",
+    "memo": "대규모 코드베이스 리팩토링 및 고품질 합성 데이터셋 빌드"
+  },
+  {
+    "id": 8,
+    "title": "한국어",
+    "tag": "ai, llm",
+    "memo": "Korean language"
+  }
+]

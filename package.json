@@ -4,6 +4,13 @@
   "description": "",
   "main": "logger.js",
   "scripts": {
+    "auto": "auto_run.bat",
+    "pipeline": "python -u auto_pipeline.py",
+    "schedule": "register_scheduler.bat",
+    "manual": "python publish_manual.py",
+    "ingest": "node .agents/skills/ingest-reddit-posts/scripts/test_reddit.js",
+    "publish": "publish_naver_all.bat",
+    "dashboard": "node dashboard/server.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],

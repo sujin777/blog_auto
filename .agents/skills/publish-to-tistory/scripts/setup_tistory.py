@@ -117,7 +117,30 @@ def clone_profile(src: Path) -> Path:
         return dest
     dest.parent.mkdir(parents=True, exist_ok=True)
     print(f"Cloning profile {src} -> {dest}")
-    shutil.copytree(src, dest, ignore=PROFILE_IGNORE, symlinks=True)
+    
+    def safe_copy(s, d):
+        try:
+            shutil.copy2(s, d)
+        except (PermissionError, OSError) as e:
+            pass
+
+    for root, dirs, files in os.walk(src):
+        rel_path = Path(root).relative_to(src)
+        target_dir = dest / rel_path
+        
+        # 필터링할 폴더 스킵
+        dirs[:] = [d for d in dirs if not any(p in d for p in ["Cache", "Code Cache", "GPUCache", "ShaderCache", "Crashpad"])]
+        
+        try:
+            target_dir.mkdir(parents=True, exist_ok=True)
+        except OSError:
+            continue
+            
+        for f in files:
+            if any(p in f.lower() for p in ["lock", "singleton", "journal", "crashpad"]):
+                continue
+            safe_copy(Path(root) / f, target_dir / f)
+
     return dest
 
 
