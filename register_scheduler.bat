@@ -16,8 +16,8 @@ echo.
 set TASK_NAME=AutoBlogRunnerDaily
 set SCRIPT_PATH=c:\DEV\261025_blog_auto\auto_run_complete.bat
 
-set RUN_TIME=08:30
-set /p USER_TIME="매일 실행할 시각을 입력하세요 (기본값: 08:30, 24시간 형식): "
+set RUN_TIME=06:00
+set /p USER_TIME="매일 실행할 시각을 입력하세요 (기본값: 06:00, 24시간 형식): "
 if not "%USER_TIME%"=="" set RUN_TIME=%USER_TIME%
 
 echo.
@@ -41,4 +41,3 @@ if %errorlevel% equ 0 (
 
 echo.
 pause
-

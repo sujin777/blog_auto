@@ -2,9 +2,9 @@ name: Daily Auto Blog Publisher
 
 on:
   schedule:
-    # 매일 한국 시간(KST) 오전 8시 30분 실행 (UTC 23:30)
-    - cron: '30 23 * * *'
-  workflow_dispatch: # 수동 즉시 실행 지원
+    # 매일 한국 시간(KST) 오전 6시 00분 실행 (UTC 21:00)
+    - cron: '0 21 * * *'
+  workflow_dispatch: # GitHub 웹 콘솔 또는 API 수동 즉시 실행 지원
 
 jobs:
   build-and-publish:
@@ -24,6 +24,11 @@ jobs:
         with:
           node-version: '20'
 
+      - name: Install System Korean Fonts (for Playwright Card Rendering)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y fonts-nanum
+
       - name: Install Dependencies
         run: |
           npm install
@@ -36,6 +41,7 @@ jobs:
         run: |
           if [ -n "$NAVER_SESSION_B64" ]; then
             echo "$NAVER_SESSION_B64" | base64 -d > .agents/skills/publish-to-naver/naver_session.json
+            echo "Naver session file restored successfully."
           fi
 
       - name: Run Full Auto Pipeline
@@ -46,4 +52,3 @@ jobs:
           NAVER_BLOG_ID: ${{ secrets.NAVER_BLOG_ID }}
         run: |
           python -u auto_pipeline.py
-
