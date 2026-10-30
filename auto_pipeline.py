@@ -90,6 +90,20 @@ def render_diagram_card(title, subtitle, badge, steps, output_png_path):
         page.screenshot(path=output_png_path)
         b.close()
 
+def generate_with_retry(client, prompt, model="gemini-3.8-flash", max_retries=5, initial_delay=5):
+    for attempt in range(1, max_retries + 1):
+        try:
+            return client.models.generate_content(model=model, contents=prompt)
+        except Exception as e:
+            err_str = str(e)
+            if attempt < max_retries and any(k in err_str for k in ["503", "429", "UNAVAILABLE", "RESOURCE_EXHAUSTED", "overloaded"]):
+                delay = initial_delay * (2 ** (attempt - 1))
+                log(f"⚠️ Gemini API 일시적 부하 발생 ({err_str[:60]})... {delay}초 대기 후 재시도 ({attempt}/{max_retries})")
+                time.sleep(delay)
+            else:
+                log(f"❌ Gemini API 오류: {err_str}")
+                raise
+
 def run_step_2_generate_articles(folder_path):
     log("=======================================================")
     log("🤖 [2단계] Gemini 3.8 Flash 엔진 기반 포스트 및 도해 자동 생성")
@@ -137,7 +151,7 @@ def run_step_2_generate_articles(folder_path):
         마크다운 시작부터 끝까지 백틱 코드 블록(```markdown)으로 감싸지 말고 순수 마크다운 본문만 그대로 출력하세요.
         """
         
-        res = client.models.generate_content(model="gemini-3.8-flash", contents=prompt)
+        res = generate_with_retry(client, prompt, model="gemini-3.8-flash")
         article_md = res.text.strip()
         
         # 파일명 생성
@@ -171,7 +185,7 @@ def run_step_2_generate_articles(folder_path):
         }}
         오직 순수 JSON만 출력하세요.
         """
-        meta_res = client.models.generate_content(model="gemini-3.8-flash", contents=meta_prompt)
+        meta_res = generate_with_retry(client, meta_prompt, model="gemini-3.8-flash")
         meta_json_str = meta_res.text.strip().replace("```json", "").replace("```", "").strip()
         try:
             meta = json.loads(meta_json_str)
