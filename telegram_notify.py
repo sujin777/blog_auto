@@ -3,7 +3,21 @@ import json
 import requests
 from datetime import datetime
 
+ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
+
+def load_env():
+    env_file = os.path.join(ROOT_DIR, ".env")
+    if os.path.exists(env_file):
+        with open(env_file, "r", encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if line and not line.startswith("#") and "=" in line:
+                    k, v = line.split("=", 1)
+                    if k.strip() not in os.environ:
+                        os.environ[k.strip()] = v.strip().strip("'\"")
+
 def send_telegram_alert(message):
+    load_env()
     token = os.environ.get("TELEGRAM_BOT_TOKEN", "").strip()
     chat_id = os.environ.get("TELEGRAM_CHAT_ID", "").strip()
     
@@ -64,5 +78,5 @@ def format_error_message(error_str):
     )
 
 if __name__ == "__main__":
-    test_msg = "🔔 [Blog Auto] 텔레그램 알림 시스템 연동 테스트 성공!"
+    test_msg = "🔔 [Blog Auto] 텔레그램 알림 시스템 연동 테스트 성공!\n스마트폰 알림이 정상적으로 수신되었습니다."
     send_telegram_alert(test_msg)
