@@ -41,10 +41,16 @@ def format_publish_success_message(published_posts):
     for i, p in enumerate(published_posts, 1):
         title = p.get("title", f"포스트 {i}")
         url = p.get("url", "#")
+        category = p.get("category", "")
+        reason = p.get("selection_reason", "")
         lines.append(f"*{i}. {title}*")
+        if category:
+            lines.append(f"🏷️ 카테고리: {category}")
+        if reason:
+            lines.append(f"📊 선별 사유: {reason}")
         lines.append(f"👉 [블로그 보기]({url})\n")
         
-    lines.append("🏆 *모든 시스템이 무인 정상 가동 중입니다.*")
+    lines.append("🏆 *스마트 큐레이션 엔진 무인 정상 가동 중*")
     return "\n".join(lines)
 
 def format_error_message(error_str):
@@ -60,4 +66,3 @@ def format_error_message(error_str):
 if __name__ == "__main__":
     test_msg = "🔔 [Blog Auto] 텔레그램 알림 시스템 연동 테스트 성공!"
     send_telegram_alert(test_msg)
-

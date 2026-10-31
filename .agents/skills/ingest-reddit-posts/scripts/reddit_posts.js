@@ -68,11 +68,12 @@ const fetchRedditTrends = async () => {
       // 사용자 지정 강제 적용 우회법 Payload 100% 하드코딩 반영
       const apiPayload = {
         "startUrls": [
-          {
-            "url": "https://www.reddit.com/r/ClaudeAI/top/?t=day"
-          }
+          { "url": "https://www.reddit.com/r/ClaudeAI/top/?t=day" },
+          { "url": "https://www.reddit.com/r/ChatGPT/top/?t=day" },
+          { "url": "https://www.reddit.com/r/OpenAI/top/?t=day" },
+          { "url": "https://www.reddit.com/r/artificial/top/?t=day" }
         ],
-        "maxPostsCount": 10,
+        "maxPostsCount": 20,
         "proxy": {
           "useApifyProxy": true,
           "apifyProxyGroups": [
