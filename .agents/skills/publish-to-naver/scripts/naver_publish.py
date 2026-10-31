@@ -160,7 +160,19 @@ def run(md_file, publish=False, headless=True):
             page.goto(f"https://blog.naver.com/{NAVER_BLOG_ID}/postwrite", wait_until="domcontentloaded")
             page.wait_for_timeout(1500)
             if "nidlogin" in page.url or "nid.naver.com" in page.url:
-                log("🔑 세션 만료 감지 → 만료 쿠키 초기화 후 현재 브라우저 창에서 로그인 대기 중...")
+                log("🔑 세션 만료 감지!")
+                try:
+                    sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(SKILL_DIR))))
+                    from telegram_notify import send_telegram_alert
+                    send_telegram_alert("🚨 *[네이버 세션 만료 긴급 알림]*\n네이버 로그인 세션이 만료되었습니다.\n무인 자동 발행을 위해 PC에서 `naver_login.bat`을 실행해 재로그인해 주세요!")
+                except Exception as t_err:
+                    log(f"텔레그램 알림 예외: {t_err}")
+
+                if headless:
+                    shot(page, "99_error.png", shots_dir)
+                    raise RuntimeError("🚨 네이버 세션 만료: 백그라운드 무인(Headless) 환경에서는 직접 로그인이 불가능합니다. 텔레그램으로 긴급 알림을 전송했습니다.")
+
+                log("현재 브라우저 창에서 로그인 대기 중...")
                 context.clear_cookies()
                 page.goto("https://nid.naver.com/nidlogin.login", wait_until="domcontentloaded")
                 page.bring_to_front()
