@@ -177,7 +177,7 @@ def run(md_file, publish=False, headless=True):
                     cookies = context.cookies()
                     has_auth = any(c.get("name") == "NID_AUT" for c in cookies)
                     has_ses = any(c.get("name") == "NID_SES" for c in cookies)
-                    if has_auth and has_ses and "nidlogin" not in page.url and "nid.naver.com" not in page.url:
+                    if (has_auth and has_ses) or ("nidlogin" not in page.url and "nid.naver.com" not in page.url):
                         context.storage_state(path=SESSION_FILE)
                         log(f"💾 로그인 감지 및 영구 세션 갱신 완료 ({SESSION_FILE})")
                         break
@@ -253,7 +253,9 @@ def run(md_file, publish=False, headless=True):
             try:
                 page.wait_for_url(lambda u: "postwrite" not in u and ("logNo=" in u or "PostView" in u), timeout=25000)
                 shot(page, "03_published.png", shots_dir)
-                log(f"🎉 네이버 블로그 최종 발행 완료! 확인 URL: {page.url}")
+                final_url = page.url
+                log(f"🎉 네이버 블로그 최종 발행 완료! 확인 URL: {final_url}")
+                return title, final_url
             except Exception as wait_err:
                 shot(page, "03_publish_failed.png", shots_dir)
                 curr_url = page.url

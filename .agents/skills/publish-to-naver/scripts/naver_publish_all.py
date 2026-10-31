@@ -2,6 +2,7 @@ import argparse
 import os
 import sys
 import time
+import json
 from naver_publish import run
 
 if sys.platform == "win32":
@@ -16,7 +17,7 @@ def main():
     parser.add_argument("--dir", required=True, help="Path to output directory (e.g. output/261025_0745)")
     parser.add_argument("--publish", action="store_true", help="Publish immediately (default is draft)")
     parser.add_argument("--headed", action="store_true", help="Show browser window")
-    parser.add_argument("--interval", type=int, default=15, help="Interval seconds between posts (default: 15)")
+    parser.add_argument("--interval", type=int, default=8, help="Interval seconds between posts (default: 8)")
     args = parser.parse_args()
 
     target_dir = os.path.abspath(args.dir)
@@ -36,10 +37,14 @@ def main():
         print(f"  [{i}] {os.path.basename(p)}")
     print("=" * 60)
 
+    results = []
     for i, md_file in enumerate(md_files, 1):
         print(f"\n🚀 [{i}/{len(md_files)}] '{os.path.basename(md_file)}' 네이버 블로그 업로드 시작...")
         try:
-            run(md_file, publish=args.publish, headless=not args.headed)
+            res = run(md_file, publish=args.publish, headless=not args.headed)
+            if res and isinstance(res, tuple):
+                p_title, p_url = res
+                results.append({"title": p_title, "url": p_url})
             print(f"✅ [{i}/{len(md_files)}] 처리 완료!")
         except Exception as e:
             print(f"❌ [{i}/{len(md_files)}] 실패: {e}")
@@ -47,6 +52,11 @@ def main():
         if i < len(md_files):
             print(f"⏳ 다음 포스트까지 {args.interval}초 대기...")
             time.sleep(args.interval)
+
+    # 결과 JSON 저장
+    result_json_path = os.path.join(target_dir, "published_results.json")
+    with open(result_json_path, "w", encoding="utf-8") as f:
+        json.dump(results, f, ensure_ascii=False, indent=2)
 
     print("\n🎉 모든 포스트 일괄 업로드 처리가 완료되었습니다!")
 

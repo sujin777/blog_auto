@@ -32,22 +32,10 @@ def load_env():
 
 def run_step_1_ingest():
     log("=======================================================")
-    log("🚀 [1단계] Reddit r/ClaudeAI 최신 인기글 수집 시작")
+    log("🚀 [1단계] 2+1 멀티채널(Reddit 2편 + HackerNews 1편) 트렌드 수집")
     log("=======================================================")
-    js_script = os.path.join(ROOT_DIR, ".agents", "skills", "ingest-reddit-posts", "scripts", "test_reddit.js")
-    ret = subprocess.run(["node", js_script], cwd=ROOT_DIR)
-    if ret.returncode != 0:
-        raise RuntimeError("Reddit 데이터 수집 실패")
-    
-    # 최신 output 폴더 탐색
-    output_dir = os.path.join(ROOT_DIR, "output")
-    folders = [f for f in os.listdir(output_dir) if f.startswith("2") and os.path.isdir(os.path.join(output_dir, f))]
-    folders.sort(reverse=True)
-    if not folders:
-        raise RuntimeError("output 폴더를 찾을 수 없습니다.")
-    latest_folder = os.path.join(output_dir, folders[0])
-    log(f"✅ 수집 완료: {latest_folder}")
-    return latest_folder
+    from multichannel_ingest import run_multichannel_ingest
+    return run_multichannel_ingest()
 
 def render_diagram_card(title, subtitle, badge, steps, output_png_path):
     steps_html = ""
@@ -123,16 +111,18 @@ def run_step_2_generate_articles(folder_path):
     log(f"총 {len(posts)}개 포스트 중 상위 {len(top_posts)}개 주제 선별 완료")
     
     for idx, p in enumerate(top_posts, 1):
-        log(f"\n[{idx}/{len(top_posts)}] 주제 생성 중: {p['title'][:40]}...")
+        source_name = p.get('source', 'Reddit')
+        log(f"\n[{idx}/{len(top_posts)}] [{source_name}] 주제 생성 중: {p['title'][:40]}...")
         
         prompt = f"""
         당신은 상위 1% 전문 IT/비즈니스 테크 블로거이자 소프트웨어 아키텍트입니다.
-        아래의 Reddit 인기 기술 이슈 원본을 분석하여, 공부하는 비개발자나 초보자도 몰입해서 끝까지 읽을 수 있는 최고 품질의 네이버 블로그 기술 포스트를 작성해 주세요.
+        아래의 {source_name} 인기 기술 이슈 원본을 분석하여, 공부하는 비개발자나 초보자도 몰입해서 끝까지 읽을 수 있는 최고 품질의 네이버 블로그 기술 포스트를 작성해 주세요.
 
-        [Reddit 원본 포스트 정보]
+        [기술 원본 정보]
+        - 출처: {source_name}
         - 제목: {p['title']}
         - 작성자: @{p.get('author', 'anonymous')}
-        - 좋아요: {p.get('metrics', {}).get('likes', 0)}
+        - 좋아요/추천수: {p.get('metrics', {}).get('likes', 0)}
         - 본문: {p.get('content', '')}
 
         [엄격한 작성 규칙]
@@ -228,23 +218,40 @@ def run_step_3_publish(folder_path):
         "--interval", "8"
     ], cwd=ROOT_DIR)
     
+    published_results = []
+    result_json_path = os.path.join(folder_path, "published_results.json")
+    if os.path.exists(result_json_path):
+        try:
+            with open(result_json_path, "r", encoding="utf-8") as f:
+                published_results = json.load(f)
+        except Exception:
+            pass
+            
     if ret.returncode == 0:
         log("🎉 모든 포스트 네이버 블로그 일괄 자동 발행 성공!")
     else:
         log(f"⚠️ 네이버 발행 스크립트 종료 코드: {ret.returncode}")
+        
+    return published_results
 
 def main():
     load_env()
     log("🌟 [AI Blog Auto Runner] 무인 전자동 블로그 파이프라인 시작")
+    from telegram_notify import send_telegram_alert, format_publish_success_message, format_error_message
     try:
         latest_folder = run_step_1_ingest()
         run_step_2_generate_articles(latest_folder)
-        run_step_3_publish(latest_folder)
+        results = run_step_3_publish(latest_folder)
         log("🏆 전체 무인 파이프라인이 성공적으로 완료되었습니다!")
+        
+        if results:
+            msg = format_publish_success_message(results)
+            send_telegram_alert(msg)
     except Exception as e:
-        log(f"❌ 파이프라인 실행 중 오류 발생: {e}")
+        err_msg = str(e)
+        log(f"❌ 파이프라인 실행 중 오류 발생: {err_msg}")
+        send_telegram_alert(format_error_message(err_msg))
         sys.exit(1)
 
 if __name__ == "__main__":
     main()
-

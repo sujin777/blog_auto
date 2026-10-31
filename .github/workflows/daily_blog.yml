@@ -1,4 +1,4 @@
-name: Daily Auto Blog Publisher
+name: Daily Auto Blog Publisher (Self-Hosted Runner)
 
 on:
   schedule:
@@ -8,55 +8,41 @@ on:
 
 jobs:
   build-and-publish:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-          cache: 'pip'
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-
-      - name: Install System Korean Fonts (for Playwright Card Rendering)
+      - name: Sync Credentials and Session from Local Workspace
+        shell: powershell
         run: |
-          sudo apt-get update
-          sudo apt-get install -y fonts-nanum
+          Write-Host "[1/3] 로컬 자격증명 및 네이버 세션 동기화 검사"
+          if (Test-Path "c:\DEV\261025_blog_auto\.env") {
+            Write-Host "로컬 .env 복사 완료"
+            Copy-Item "c:\DEV\261025_blog_auto\.env" . -Force
+          }
+          if (Test-Path "c:\DEV\261025_blog_auto\.agents\skills\publish-to-naver\naver_session.json") {
+            Write-Host "로컬 naver_session.json 복사 완료"
+            New-Item -ItemType Directory -Force -Path ".agents\skills\publish-to-naver" | Out-Null
+            Copy-Item "c:\DEV\261025_blog_auto\.agents\skills\publish-to-naver\naver_session.json" ".agents\skills\publish-to-naver\naver_session.json" -Force
+          }
 
-      - name: Install Dependencies
-        run: |
-          npm install
-          pip install -r requirements.txt
-          playwright install --with-deps chromium
-
-      - name: Restore Naver Session
-        env:
-          NAVER_SESSION_B64: ${{ secrets.NAVER_SESSION_B64 }}
-        run: |
-          if [ -n "$NAVER_SESSION_B64" ]; then
-            mkdir -p .agents/skills/publish-to-naver
-            echo "$NAVER_SESSION_B64" | base64 -d > .agents/skills/publish-to-naver/naver_session.json
-            echo "Naver session file restored successfully."
-          fi
-
-      - name: Run Full Auto Pipeline
+      - name: Run Full Auto Pipeline on Domestic IP
         env:
           APIFY_TOKEN_REDDIT: ${{ secrets.APIFY_TOKEN_REDDIT }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           NAVER_ID: ${{ secrets.NAVER_ID }}
           NAVER_BLOG_ID: ${{ secrets.NAVER_BLOG_ID }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: |
           python -u auto_pipeline.py
 
-      - name: Upload Output and Screenshots
+      - name: Persist Refreshed Session Back to Local Workspace
         if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: blog-artifacts
-          path: output/
+        shell: powershell
+        run: |
+          if (Test-Path ".agents\skills\publish-to-naver\naver_session.json") {
+            Copy-Item ".agents\skills\publish-to-naver\naver_session.json" "c:\DEV\261025_blog_auto\.agents\skills\publish-to-naver\naver_session.json" -Force
+            Write-Host "갱신된 naver_session.json 로컬 워크스페이스에 영구 보존 완료"
+          }
