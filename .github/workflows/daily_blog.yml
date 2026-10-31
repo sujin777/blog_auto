@@ -16,15 +16,15 @@ jobs:
       - name: Sync Credentials and Session from Local Workspace
         shell: powershell
         run: |
-          Write-Host "[1/3] 로컬 자격증명 및 네이버 세션 동기화 검사"
-          if (Test-Path "c:\DEV\261025_blog_auto\.env") {
-            Write-Host "로컬 .env 복사 완료"
-            Copy-Item "c:\DEV\261025_blog_auto\.env" . -Force
+          Write-Host "[1/3] Checking local credentials and Naver session..."
+          if (Test-Path "C:/DEV/261025_blog_auto/.env") {
+            Write-Host "Syncing .env from C:/DEV/261025_blog_auto/.env"
+            Copy-Item "C:/DEV/261025_blog_auto/.env" . -Force
           }
-          if (Test-Path "c:\DEV\261025_blog_auto\.agents\skills\publish-to-naver\naver_session.json") {
-            Write-Host "로컬 naver_session.json 복사 완료"
-            New-Item -ItemType Directory -Force -Path ".agents\skills\publish-to-naver" | Out-Null
-            Copy-Item "c:\DEV\261025_blog_auto\.agents\skills\publish-to-naver\naver_session.json" ".agents\skills\publish-to-naver\naver_session.json" -Force
+          if (Test-Path "C:/DEV/261025_blog_auto/.agents/skills/publish-to-naver/naver_session.json") {
+            Write-Host "Syncing naver_session.json from local dev"
+            New-Item -ItemType Directory -Force -Path ".agents/skills/publish-to-naver" | Out-Null
+            Copy-Item "C:/DEV/261025_blog_auto/.agents/skills/publish-to-naver/naver_session.json" ".agents/skills/publish-to-naver/naver_session.json" -Force
           }
 
       - name: Run Full Auto Pipeline on Domestic IP
@@ -42,7 +42,7 @@ jobs:
         if: always()
         shell: powershell
         run: |
-          if (Test-Path ".agents\skills\publish-to-naver\naver_session.json") {
-            Copy-Item ".agents\skills\publish-to-naver\naver_session.json" "c:\DEV\261025_blog_auto\.agents\skills\publish-to-naver\naver_session.json" -Force
-            Write-Host "갱신된 naver_session.json 로컬 워크스페이스에 영구 보존 완료"
+          if (Test-Path ".agents/skills/publish-to-naver/naver_session.json") {
+            Copy-Item ".agents/skills/publish-to-naver/naver_session.json" "C:/DEV/261025_blog_auto/.agents/skills/publish-to-naver/naver_session.json" -Force
+            Write-Host "Persisted updated naver_session.json back to C:/DEV/261025_blog_auto"
           }

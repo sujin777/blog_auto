@@ -8,3 +8,4 @@ If colProcesses.Count = 0 Then
 Else
     WScript.Echo "GitHub Actions Runner가 이미 정상 실행 중입니다."
 End If
+
