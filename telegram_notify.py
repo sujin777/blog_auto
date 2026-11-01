@@ -53,6 +53,35 @@ def send_telegram_alert(message):
         print(f"⚠️ [Telegram] 알림 발송 예외: {e}")
         return False
 
+def send_telegram_photo(photo_path, caption=""):
+    load_env()
+    token = os.environ.get("TELEGRAM_BOT_TOKEN", "").strip()
+    chat_id = os.environ.get("TELEGRAM_CHAT_ID", "").strip()
+    
+    if not token or not chat_id:
+        print("[Telegram] 사진 알림 건너뜀 (토큰 또는 챗ID 미설정)")
+        return False
+        
+    if not os.path.exists(photo_path):
+        print(f"⚠️ [Telegram] 사진 파일 없음: {photo_path}")
+        return False
+
+    url = f"https://api.telegram.org/bot{token}/sendPhoto"
+    try:
+        with open(photo_path, "rb") as f:
+            files = {"photo": f}
+            data = {"chat_id": chat_id, "caption": caption, "parse_mode": "Markdown"}
+            res = requests.post(url, data=data, files=files, timeout=15)
+        if res.status_code == 200:
+            print("📱 [Telegram] 사진 알림 발송 성공!")
+            return True
+        else:
+            print(f"⚠️ [Telegram] 사진 발송 실패 ({res.status_code}): {res.text}")
+            return False
+    except Exception as e:
+        print(f"⚠️ [Telegram] 사진 발송 예외: {e}")
+        return False
+
 def format_publish_success_message(published_posts):
     ts = datetime.now().strftime("%Y-%m-%d %H:%M")
     lines = [
