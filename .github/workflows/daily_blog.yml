@@ -2,8 +2,8 @@ name: Daily Auto Blog Publisher (Self-Hosted Runner)
 
 on:
   schedule:
-    # 1. 오늘 오전 9시 00분 테스트 자동 실행 (KST 09:00 = UTC 00:00)
-    - cron: '0 0 * * *'
+    # 1. 오늘 오전 10시 00분 테스트 자동 실행 (KST 10:00 = UTC 01:00)
+    - cron: '0 1 * * *'
     # 2. 매일 아침 6시 00분 정기 자동 실행 (KST 06:00 = UTC 21:00)
     - cron: '0 21 * * *'
   workflow_dispatch: # GitHub 웹 콘솔 또는 API 수동 즉시 실행 지원
