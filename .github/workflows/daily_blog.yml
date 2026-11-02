@@ -17,6 +17,7 @@ jobs:
         shell: powershell
         run: |
           Write-Host "[1/3] Checking local dependencies, credentials and Naver session..."
+          New-Item -ItemType Directory -Force -Path "output" | Out-Null
           if (Test-Path "C:/DEV/261025_blog_auto/.env") {
             Write-Host "Syncing .env..."
             Copy-Item "C:/DEV/261025_blog_auto/.env" . -Force
@@ -37,13 +38,6 @@ jobs:
           }
 
       - name: Run Full Auto Pipeline on Domestic IP
-        env:
-          APIFY_TOKEN_REDDIT: ${{ secrets.APIFY_TOKEN_REDDIT }}
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          NAVER_ID: ${{ secrets.NAVER_ID }}
-          NAVER_BLOG_ID: ${{ secrets.NAVER_BLOG_ID }}
-          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: |
           python -u auto_pipeline.py
 

@@ -218,6 +218,14 @@ def run_step_2_generate_articles(folder_path):
             render_diagram_card(f"AI Tech Briefing {idx}", "글로벌 테크 트렌드 핵심 분석", "TREND", ["최신 모델 발표", "벤치마크 분석", "생산성 혁신", "향후 전망"], img1_path)
             render_diagram_card(f"Architecture {idx}", "시스템 내부 작동 메커니즘", "SYSTEM", ["입력 데이터 수신", "프롬프트 최적화", "추론 및 가공", "최종 배포"], img2_path)
 
+        # 네이버 스마트에디터 ONE 업로더 탐색을 위해 폴더 루트에도 이미지 복사 동기화
+        import shutil
+        try:
+            shutil.copy2(img1_path, os.path.join(folder_path, f"{idx}_main.png"))
+            shutil.copy2(img2_path, os.path.join(folder_path, f"{idx}_arch.png"))
+        except Exception:
+            pass
+
         # 마크다운 저장
         md_file = os.path.join(folder_path, f"{folder_name}.md")
         with open(md_file, "w", encoding="utf-8") as f:

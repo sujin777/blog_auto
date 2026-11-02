@@ -8,6 +8,19 @@ from datetime import datetime
 
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
 
+def load_env():
+    env_file = os.path.join(ROOT_DIR, ".env")
+    if os.path.exists(env_file):
+        with open(env_file, "r", encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if line and not line.startswith("#") and "=" in line:
+                    k, v = line.split("=", 1)
+                    val = v.strip().strip("'\"")
+                    # 환경 변수가 없거나 비어있는 경우 주입
+                    if not os.environ.get(k.strip()):
+                        os.environ[k.strip()] = val
+
 # 네이버 상위 노출 20대 핵심 테크 키워드 사전
 TECH_KEYWORDS = [
     "chatgpt", "챗gpt", "클로드", "claude", "생성형 ai", "생성형ai",
@@ -32,14 +45,15 @@ def is_tech_story(title, url):
     combined = (title + " " + url).lower()
     return any(kw in combined for kw in HN_TECH_KEYWORDS)
 
-def fetch_hacker_news_top_tech():
-    log("📰 [Hacker News] 상위 15개 핫토픽 중 IT/소프트웨어/기술 최상위 아티클 탐색 중...")
+def fetch_hacker_news_top_tech(limit=1):
+    log(f"📰 [Hacker News] 상위 20개 핫토픽 중 IT/소프트웨어 테크 아티클 {limit}개 탐색 중...")
+    results = []
     try:
         top_ids = requests.get("https://hacker-news.firebaseio.com/v0/topstories.json", timeout=10).json()
         if not top_ids:
-            return None
+            return results if limit > 1 else None
         
-        for rank, story_id in enumerate(top_ids[:15], 1):
+        for rank, story_id in enumerate(top_ids[:20], 1):
             item = requests.get(f"https://hacker-news.firebaseio.com/v0/item/{story_id}.json", timeout=10).json()
             if not item or item.get("type") != "story":
                 continue
@@ -50,9 +64,7 @@ def fetch_hacker_news_top_tech():
             by = item.get("by", "anonymous")
             descendants = item.get("descendants", 0)
             
-            # 테크/소프트웨어/엔지니어링 필터 적용
             if not is_tech_story(title, url) and rank > 3:
-                # 3위 이내라도 순수 비IT면 스킵
                 continue
 
             content = item.get("text", "")
@@ -61,8 +73,7 @@ def fetch_hacker_news_top_tech():
             else:
                 content = f"{content}\n\n(참고 링크: {url})"
                 
-            log(f"  ✓ Hacker News 테크 1위 선정: #{rank} {title} (추천 {score}개, 댓글 {descendants}개)")
-            return {
+            story_data = {
                 "id": str(story_id),
                 "title": f"[HackerNews {rank}위] {title}",
                 "author": by,
@@ -76,9 +87,16 @@ def fetch_hacker_news_top_tech():
                 "source": "HackerNews",
                 "selection_reason": f"Hacker News 테크 랭킹 {rank}위 (추천 {score}개, 댓글 {descendants}개)"
             }
+            results.append(story_data)
+            log(f"  ✓ Hacker News 테크 선정: #{rank} {title} (추천 {score}개, 댓글 {descendants}개)")
+            if len(results) >= limit:
+                break
     except Exception as e:
         log(f"  ⚠️ Hacker News 수집 중 예외 발생: {e}")
-        return None
+
+    if limit == 1:
+        return results[0] if results else None
+    return results
 
 def calculate_virality_score(post):
     upvotes = post.get("metrics", {}).get("likes", 0)
@@ -93,7 +111,6 @@ def calculate_virality_score(post):
         return -1.0, "본문 분량 부족 (< 150자)", []
 
     # 2. 기본 바이럴 스코어: 추천수(40%) + 댓글 토론 열기(30%) + 정보 텍스트 밀도(30%)
-    # 텍스트 밀도는 최대 1200자 기준 정규화
     text_density_score = min(content_len, 1200) / 1200.0 * 30.0
     base_score = (upvotes * 0.4) + (comments * 0.3) + text_density_score
 
@@ -113,7 +130,6 @@ def calculate_virality_score(post):
 def categorize_and_select(scored_posts, hn_post):
     log("🧠 [3대 테마 밸런스 선별] 실용 팁 / 최신 모델 테크 / 글로벌 인사이트 배분 중...")
     
-    # 테마 키워드 정의
     practical_keywords = ["tip", "prompt", "workflow", "how to", "use case", "automation", "guide", "free", "tricks", "productivity", "팁", "활용", "작성", "방법"]
     frontier_keywords = ["model", "claude", "gpt", "openai", "anthropic", "deepseek", "release", "benchmark", "update", "reasoning", "opus", "sonnet", "o3", "모델", "출시", "업데이트"]
 
@@ -140,7 +156,7 @@ def categorize_and_select(scored_posts, hn_post):
     # 2차 분류: 최신 AI 모델 & 기술 혁신 포스트 탐색 (slot1 제외)
     for item in scored_posts:
         post = item["post"]
-        if post["url"] == slot1["url"]:
+        if slot1 and post["url"] == slot1.get("url"):
             continue
         text = (post["title"] + " " + post["content"]).lower()
         if any(kw in text for kw in frontier_keywords):
@@ -150,51 +166,76 @@ def categorize_and_select(scored_posts, hn_post):
             break
 
     # 최신 모델 슬롯이 비었으면 다음 순위 최고 득점 글 배정
-    if not slot2:
+    if not slot2 and scored_posts:
         for item in scored_posts:
-            if item["post"]["url"] != slot1["url"]:
+            if slot1 and item["post"]["url"] != slot1.get("url"):
                 slot2 = item["post"]
                 slot2["category"] = "최신 AI 모델 및 빅테크 기술 혁신"
                 slot2["selection_reason"] = item["reason"]
                 break
 
-    selected = [slot1, slot2]
+    selected = []
+    if slot1:
+        selected.append(slot1)
+    if slot2:
+        selected.append(slot2)
     if slot3:
         selected.append(slot3)
-    elif len(scored_posts) >= 3:
-        # HN 부재 시 Reddit 3위 배정
-        remaining = [item["post"] for item in scored_posts if item["post"]["url"] not in [slot1["url"], slot2["url"]]]
-        if remaining:
-            fallback = remaining[0]
-            fallback["category"] = "글로벌 IT 엔지니어링 인사이트"
-            fallback["selection_reason"] = "Reddit 종합 인기 3위"
-            selected.append(fallback)
 
-    return selected
+    # 3개 미달 시 Hacker News 추가 글로 슬롯 채우기 (절대 부족하지 않도록 보장)
+    if len(selected) < 3:
+        hn_extras = fetch_hacker_news_top_tech(limit=4)
+        for h in hn_extras:
+            if not any(s.get("url") == h.get("url") for s in selected):
+                if len(selected) == 0:
+                    h["category"] = "실생활/업무 AI 생산성 및 꿀팁"
+                elif len(selected) == 1:
+                    h["category"] = "최신 AI 모델 및 빅테크 기술 혁신"
+                selected.append(h)
+                if len(selected) >= 3:
+                    break
+
+    return selected[:3]
 
 def run_multichannel_ingest():
     log("==================================================================")
     log("🌐 [스마트 큐레이션 수집기] Reddit 4대 커뮤니티 + Hacker News 테크")
     log("==================================================================")
 
+    load_env()
+    output_dir = os.path.join(ROOT_DIR, "output")
+    # [WinError 3 방지] output 디렉토리 무조건 안전 생성
+    os.makedirs(output_dir, exist_ok=True)
+
     # 1. Reddit 4대 메이저 AI 커뮤니티 수집 (Apify Scraper)
     reddit_js = os.path.join(ROOT_DIR, ".agents", "skills", "ingest-reddit-posts", "scripts", "test_reddit.js")
-    ret = subprocess.run(["node", reddit_js], cwd=ROOT_DIR)
-    if ret.returncode != 0:
-        raise RuntimeError("Reddit 4대 커뮤니티 데이터 수집 실패")
+    try:
+        ret = subprocess.run(["node", reddit_js], cwd=ROOT_DIR, env=os.environ.copy())
+        if ret.returncode != 0:
+            log(f"⚠️ Reddit 수집 스크립트 비정상 종료 (코드: {ret.returncode})")
+    except Exception as e:
+        log(f"⚠️ Reddit 스크립트 실행 예외: {e}")
 
-    # 최신 output 폴더 탐색
-    output_dir = os.path.join(ROOT_DIR, "output")
+    # 최신 output 폴더 탐색 (없으면 현재 타임스탬프로 즉시 생성)
+    now_str = datetime.now().strftime("%y%m%d_%H%M")
     folders = [f for f in os.listdir(output_dir) if f.startswith("2") and os.path.isdir(os.path.join(output_dir, f))]
     folders.sort(reverse=True)
-    if not folders:
-        raise RuntimeError("output 폴더를 찾을 수 없습니다.")
     
-    latest_folder = os.path.join(output_dir, folders[0])
+    if not folders or not folders[0].startswith(datetime.now().strftime("%y%m%d")):
+        latest_folder = os.path.join(output_dir, now_str)
+        os.makedirs(latest_folder, exist_ok=True)
+    else:
+        latest_folder = os.path.join(output_dir, folders[0])
+    
     raw_json_file = os.path.join(latest_folder, "raw_reddit_data.json")
     
-    with open(raw_json_file, "r", encoding="utf-8") as f:
-        reddit_posts = json.load(f)
+    reddit_posts = []
+    if os.path.exists(raw_json_file):
+        try:
+            with open(raw_json_file, "r", encoding="utf-8") as f:
+                reddit_posts = json.load(f)
+        except Exception as e:
+            log(f"⚠️ raw_reddit_data.json 읽기 실패: {e}")
 
     log(f"📥 수집된 원본 Reddit 글: {len(reddit_posts)}개")
 
@@ -208,15 +249,12 @@ def run_multichannel_ingest():
                 "reason": reason,
                 "post": p
             })
-        else:
-            log(f"  [노이즈 제외] {p['title'][:35]}... ({reason})")
 
-    # 점수 높은 순으로 정렬
     scored_posts.sort(key=lambda x: x["score"], reverse=True)
     log(f"📊 노이즈 필터 통과 고품질 포스트: {len(scored_posts)}개")
 
     # 3. Hacker News 상위 테크 아티클 수집
-    hn_post = fetch_hacker_news_top_tech()
+    hn_post = fetch_hacker_news_top_tech(limit=1)
 
     # 4. 3대 카테고리 밸런스 강제 배분
     final_selected = categorize_and_select(scored_posts, hn_post)

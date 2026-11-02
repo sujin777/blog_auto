@@ -28,8 +28,13 @@ const log = require('../../../../logger');
   log.section('Reddit Ingestion Test Runner');
   try {
     const posts = await fetchRedditTrends();
+    if (!posts || posts.length === 0) {
+      log.warn('수집된 게시물이 0개입니다.');
+      process.exit(1);
+    }
     log.ok(`총 ${posts.length}개의 어제자 탑 게시물이 성공적으로 수집 및 가공되었습니다.`);
   } catch (err) {
     log.err(`테스트 실행 중 치명적 에러 발생: ${err.message}`);
+    process.exit(1);
   }
 })();
