@@ -18,7 +18,14 @@ ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
 
 def log(msg):
     ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    print(f"[{ts}] {msg}", flush=True)
+    try:
+        print(f"[{ts}] {msg}", flush=True)
+    except Exception:
+        try:
+            safe_msg = str(msg).encode(sys.stdout.encoding or "utf-8", errors="replace").decode(sys.stdout.encoding or "utf-8")
+            print(f"[{ts}] {safe_msg}", flush=True)
+        except Exception:
+            pass
 
 def load_env():
     env_file = os.path.join(ROOT_DIR, ".env")
@@ -101,20 +108,25 @@ def render_diagram_card(title, subtitle, badge, steps, output_png_path):
         page.screenshot(path=output_png_path)
         browser.close()
 
-def generate_with_retry(client, prompt, model="gemini-3.8-flash", max_retries=5, initial_delay=5):
-    delay = initial_delay
-    for attempt in range(1, max_retries + 1):
-        try:
-            return client.models.generate_content(model=model, contents=prompt)
-        except Exception as e:
-            err_msg = str(e)
-            if "503" in err_msg or "429" in err_msg or "UNAVAILABLE" in err_msg or "RESOURCE_EXHAUSTED" in err_msg:
-                log(f"  ⏳ Gemini API 일시 부하 감지 (시도 {attempt}/{max_retries}). {delay}초 후 지수 백오프 재시도...")
-                time.sleep(delay)
-                delay *= 2
-            else:
-                raise e
-    raise RuntimeError(f"Gemini API 호출이 {max_retries}회 연속 실패했습니다.")
+def generate_with_retry(client, prompt, model="gemini-3.5-flash-lite", max_retries=3, initial_delay=3):
+    fallback_models = [model, "gemini-3.8-flash"]
+    for current_model in fallback_models:
+        delay = initial_delay
+        for attempt in range(1, max_retries + 1):
+            try:
+                return client.models.generate_content(model=current_model, contents=prompt)
+            except Exception as e:
+                err_msg = str(e)
+                if "429" in err_msg or "RESOURCE_EXHAUSTED" in err_msg:
+                    log(f"⚠️ 모델 '{current_model}' 쿼터 제한 감지. 대체 모델로 즉시 전환...")
+                    break
+                elif any(k in err_msg for k in ["503", "UNAVAILABLE", "overloaded"]):
+                    log(f"  ⏳ Gemini API 일시 부하 감지 (시도 {attempt}/{max_retries}). {delay}초 후 지수 백오프 재시도...")
+                    time.sleep(delay)
+                    delay *= 2
+                else:
+                    raise e
+    raise RuntimeError("모든 Gemini 모델 호출이 실패했습니다.")
 
 def run_step_2_generate_articles(folder_path):
     log("==================================================================")
@@ -165,7 +177,7 @@ def run_step_2_generate_articles(folder_path):
         마크다운 시작부터 끝까지 백틱 코드 블록(```markdown)으로 감싸지 말고 순수 마크다운 본문만 그대로 출력하세요.
         """
         
-        res = generate_with_retry(client, prompt, model="gemini-3.8-flash")
+        res = generate_with_retry(client, prompt, model="gemini-3.5-flash-lite")
         article_md = res.text.strip()
         
         # 파일명 생성
@@ -201,7 +213,7 @@ def run_step_2_generate_articles(folder_path):
         }}
         """
         try:
-            m_res = generate_with_retry(client, meta_prompt, model="gemini-3.8-flash")
+            m_res = generate_with_retry(client, meta_prompt, model="gemini-3.5-flash-lite")
             m_text = m_res.text.strip()
             if m_text.startswith("```"):
                 m_text = m_text.split("\n", 1)[1].rsplit("\n", 1)[0].strip()

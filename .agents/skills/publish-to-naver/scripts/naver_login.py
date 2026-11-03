@@ -74,13 +74,13 @@ def main():
 
         # 1. ID / PW 자동 로그인 시도 (비밀번호가 제공된 경우)
         auto_login_attempted = False
-        if NAVER_ID and NAVER_PW:
+        if NAVER_ID and NAVER_PW and "--qr-only" not in sys.argv:
             print("🔑 [ID/PW 자동 로그인] 클립보드 주입 방식으로 로그인 시도...")
             sys.stdout.flush()
             try:
                 # ID 입력
                 id_input = page.locator("#id")
-                id_input.click()
+                id_input.click(timeout=3000)
                 time.sleep(0.3)
                 pyperclip.copy(NAVER_ID)
                 page.keyboard.press("Control+V")
@@ -88,15 +88,15 @@ def main():
 
                 # PW 입력
                 pw_input = page.locator("#pw")
-                pw_input.click()
+                pw_input.click(timeout=3000)
                 time.sleep(0.3)
                 pyperclip.copy(NAVER_PW)
                 page.keyboard.press("Control+V")
                 time.sleep(0.5)
 
                 # 로그인 버튼 클릭
-                login_btn = page.locator("#log\\.login, button.btn_login, button[type='submit']").first
-                login_btn.click()
+                login_btn = page.locator("#log\\.login, button.btn_login, .btn_global, button[type='submit']").first
+                login_btn.click(timeout=3000)
                 print("🚀 로그인 버튼 클릭 완료! 응답 대기 중...")
                 sys.stdout.flush()
                 time.sleep(3)
