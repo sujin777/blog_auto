@@ -238,7 +238,12 @@ def run_step_2_generate_articles(folder_path):
         except Exception:
             pass
 
-        # 마크다운 저장
+        # 마크다운 저장 (첫 줄이 # 로 시작하지 않으면 보정)
+        lines = article_md.split("\n")
+        if lines and not lines[0].startswith("# "):
+            lines[0] = f"# {lines[0].lstrip('#').strip()}"
+            article_md = "\n".join(lines)
+
         md_file = os.path.join(folder_path, f"{folder_name}.md")
         with open(md_file, "w", encoding="utf-8") as f:
             f.write(article_md)

@@ -48,27 +48,38 @@ def main():
 
     from telegram_notify import send_telegram_alert, send_telegram_photo
 
+    USER_DATA_DIR = os.path.join(SKILL_DIR, "naver_user_data")
+    os.makedirs(USER_DATA_DIR, exist_ok=True)
+
     with sync_playwright() as p:
-        browser = p.chromium.launch(
+        context = p.chromium.launch_persistent_context(
+            user_data_dir=USER_DATA_DIR,
             headless=False,
             args=[
                 "--start-maximized",
                 "--disable-blink-features=AutomationControlled",
                 "--no-first-run",
                 "--no-default-browser-check"
-            ]
-        )
-        context = browser.new_context(
+            ],
             no_viewport=True,
             permissions=["clipboard-read", "clipboard-write"]
         )
-        page = context.new_page()
+        page = context.pages[0] if context.pages else context.new_page()
 
         print(f"🌐 네이버 로그인 페이지 접속 중... (계정: {NAVER_ID})")
         sys.stdout.flush()
         page.goto("https://nid.naver.com/nidlogin.login", wait_until="domcontentloaded")
         page.bring_to_front()
         time.sleep(1.5)
+
+        # 로그인 상태 유지 체크박스 활성화
+        try:
+            stay_cb = page.locator("#loginStay, label[for='loginStay']").first
+            if stay_cb.is_visible():
+                stay_cb.click(timeout=2000)
+                print("🔒 [로그인 상태 유지] 체크박스 활성화 완료!")
+        except Exception as e:
+            pass
 
         import pyperclip
 
@@ -185,11 +196,11 @@ def main():
             print(f"💾 [네이버 영구 세션 파일 저장 완료] ➔ {SESSION_FILE}")
             sys.stdout.flush()
             send_telegram_alert("🎉 *[네이버 로그인 성공]*\n새로운 로그인 세션이 정상 저장되었습니다!\n오늘자 블로그 3편 자동 발행을 즉시 시작합니다.")
-            browser.close()
+            context.close()
             return True
         else:
             print("\n❌ 로그인 대기 시간 초과")
-            browser.close()
+            context.close()
             return False
 
 if __name__ == "__main__":

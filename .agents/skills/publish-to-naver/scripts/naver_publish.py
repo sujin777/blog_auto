@@ -140,7 +140,14 @@ def run(md_file, publish=False, headless=True):
         sys.exit(1)
 
     with sync_playwright() as p:
-        browser = p.chromium.launch(headless=headless)
+        browser = p.chromium.launch(
+            headless=headless,
+            args=[
+                "--disable-blink-features=AutomationControlled",
+                "--no-first-run",
+                "--no-default-browser-check"
+            ]
+        )
         context = browser.new_context(
             storage_state=SESSION_FILE,
             viewport={"width": 1600, "height": 1000},

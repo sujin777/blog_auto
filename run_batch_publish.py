@@ -17,7 +17,14 @@ sys.path.append(os.path.join(ROOT_DIR, ".agents", "skills", "publish-to-naver", 
 from naver_publish import run
 from telegram_notify import send_telegram_alert, format_publish_success_message
 
-target_dir = os.path.join(ROOT_DIR, "output", "261102_1905")
+if len(sys.argv) > 1:
+    target_dir = os.path.abspath(sys.argv[1])
+else:
+    out_base = os.path.join(ROOT_DIR, "output")
+    dirs = [os.path.join(out_base, d) for d in os.listdir(out_base) if os.path.isdir(os.path.join(out_base, d)) and d.startswith("2611")]
+    target_dir = sorted(dirs)[-1]
+
+print(f"🎯 대상 디렉토리: {target_dir}")
 
 md_files = [
     os.path.join(target_dir, f)

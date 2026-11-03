@@ -25,3 +25,6 @@ scratch/
 output/
 
 *.log
+
+**/naver_user_data/
+
