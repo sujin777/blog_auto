@@ -15,6 +15,9 @@ naver_session.json
 # Test images and temp files
 test_*.png
 test_*.jpg
+*qr_live.png
+*qr_*.png
+**/naver_shots/
 
 # OS files
 .DS_Store
