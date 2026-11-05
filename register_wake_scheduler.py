@@ -9,7 +9,7 @@ if sys.platform == "win32":
     except Exception:
         pass
 
-ROOT_DIR = r"c:\DEV\261025_blog_auto"
+ROOT_DIR = r"c:\DEV\10 month\261025_blog_auto"
 RUNNER_BAT = os.path.join(ROOT_DIR, "auto_run.bat")
 
 # auto_run.bat 내용 확인 및 보강

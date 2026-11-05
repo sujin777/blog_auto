@@ -108,8 +108,8 @@ def render_diagram_card(title, subtitle, badge, steps, output_png_path):
         page.screenshot(path=output_png_path)
         browser.close()
 
-def generate_with_retry(client, prompt, model="gemini-3.5-flash-lite", max_retries=3, initial_delay=3):
-    fallback_models = [model, "gemini-3.8-flash"]
+def generate_with_retry(client, prompt, model="gemini-3.1-flash-lite", max_retries=3, initial_delay=3):
+    fallback_models = [model, "gemini-3-flash-preview"]
     for current_model in fallback_models:
         delay = initial_delay
         for attempt in range(1, max_retries + 1):
@@ -177,7 +177,7 @@ def run_step_2_generate_articles(folder_path):
         마크다운 시작부터 끝까지 백틱 코드 블록(```markdown)으로 감싸지 말고 순수 마크다운 본문만 그대로 출력하세요.
         """
         
-        res = generate_with_retry(client, prompt, model="gemini-3.5-flash-lite")
+        res = generate_with_retry(client, prompt, model="gemini-3.1-flash-lite")
         article_md = res.text.strip()
         
         # 파일명 생성
@@ -213,7 +213,7 @@ def run_step_2_generate_articles(folder_path):
         }}
         """
         try:
-            m_res = generate_with_retry(client, meta_prompt, model="gemini-3.5-flash-lite")
+            m_res = generate_with_retry(client, meta_prompt, model="gemini-3.1-flash-lite")
             m_text = m_res.text.strip()
             if m_text.startswith("```"):
                 m_text = m_text.split("\n", 1)[1].rsplit("\n", 1)[0].strip()
@@ -249,17 +249,22 @@ def run_step_2_generate_articles(folder_path):
             f.write(article_md)
         log(f"  ✍️ [{idx}/3] 블로그 포스트 본문 작성 완료 ({len(article_md)}자)")
 
-def run_step_3_publish(folder_path):
+def run_step_3_publish(folder_path, schedule=True):
     log("==================================================================")
-    log("🚀 [3단계] 네이버 블로그 스마트에디터 ONE 자동 발행 기동")
+    log("🚀 [3단계] 네이버 블로그 스마트에디터 ONE 시간차 예약 발행 기동")
     log("==================================================================")
     pub_script = os.path.join(ROOT_DIR, ".agents", "skills", "publish-to-naver", "scripts", "naver_publish_all.py")
-    ret = subprocess.run([
+    cmd = [
         sys.executable, "-u", pub_script,
         "--dir", folder_path,
-        "--publish",
         "--interval", "8"
-    ], cwd=ROOT_DIR)
+    ]
+    if schedule:
+        cmd.extend(["--schedule", "--delays", "2,4,6"])
+    else:
+        cmd.append("--publish")
+
+    ret = subprocess.run(cmd, cwd=ROOT_DIR)
     
     published_results = []
     result_json_path = os.path.join(folder_path, "published_results.json")
@@ -271,7 +276,7 @@ def run_step_3_publish(folder_path):
             pass
             
     if ret.returncode == 0:
-        log("🎉 모든 포스트 네이버 블로그 일괄 자동 발행 성공!")
+        log("🎉 모든 포스트 네이버 블로그 시간차 예약 발행 성공!")
     else:
         log(f"⚠️ 네이버 발행 스크립트 종료 코드: {ret.returncode}")
         

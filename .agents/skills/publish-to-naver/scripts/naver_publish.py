@@ -3,6 +3,7 @@ import os
 import re
 import sys
 import time
+from datetime import datetime, timedelta
 
 import markdown
 from playwright.sync_api import sync_playwright
@@ -122,14 +123,15 @@ def shot(page, name, shots_dir):
     log(f"📸 {path}")
 
 
-def run(md_file, publish=False, headless=True):
+def run(md_file, publish=False, headless=True, delay_hours=0):
     title, body, tags = parse_markdown(md_file)
     md_dir = os.path.dirname(os.path.abspath(md_file))
     shots_dir = os.path.join(md_dir, "naver_shots")
     os.makedirs(shots_dir, exist_ok=True)
     segments = split_segments(body, md_dir)
 
-    log(f"블로그 ID: {NAVER_BLOG_ID} | 모드: {'발행' if publish else '임시저장'}")
+    mode_str = f"예약 발행 ({delay_hours}시간 후)" if delay_hours > 0 else ("발행" if publish else "임시저장")
+    log(f"블로그 ID: {NAVER_BLOG_ID} | 모드: {mode_str}")
     log(f"제목: {title}")
     log(f"태그 {len(tags)}개: {', '.join(tags[:10])}")
     log(f"본문 세그먼트: {sum(1 for s in segments if s[0]=='html')}개 텍스트 / "
@@ -254,6 +256,39 @@ def run(md_file, publish=False, headless=True):
             page.wait_for_timeout(2000)
             shot(page, "02_publish_layer.png", shots_dir)
 
+            # 시간차 예약 발행 설정
+            target_reserve_dt = None
+            if delay_hours > 0:
+                log(f"⏰ [{delay_hours}시간 후] 시간차 예약 발행 옵션 설정 중...")
+                reserve_radio = page.locator("label:has-text('예약'), input[value='reserve'], [data-name='reserve']").first
+                reserve_radio.click()
+                page.wait_for_timeout(1000)
+
+                target_reserve_dt = datetime.now() + timedelta(hours=delay_hours)
+                rem = target_reserve_dt.minute % 10
+                if rem != 0:
+                    target_reserve_dt = target_reserve_dt + timedelta(minutes=(10 - rem))
+                hour_str = f"{target_reserve_dt.hour:02d}"
+                min_str = f"{target_reserve_dt.minute:02d}"
+
+                # 날짜가 익일로 넘어갈 경우 캘린더 선택
+                if target_reserve_dt.date() > datetime.now().date():
+                    log(f"  📅 예약 날짜가 익일({target_reserve_dt.strftime('%Y-%m-%d')})로 전환됩니다.")
+                    date_input = page.locator("input[class*='input_date']").first
+                    date_input.click()
+                    page.wait_for_timeout(800)
+                    day_link = page.locator(f"table.ui-datepicker-calendar td:not(.ui-datepicker-other-month) a:has-text('{target_reserve_dt.day}')").first
+                    if day_link.count():
+                        day_link.click()
+                        page.wait_for_timeout(500)
+
+                # 시간 및 분 선택
+                page.locator("select[class*='hour_option']").first.select_option(value=hour_str)
+                page.wait_for_timeout(300)
+                page.locator("select[class*='minute_option']").first.select_option(value=min_str)
+                page.wait_for_timeout(500)
+                log(f"  🎯 목표 예약 시각 세팅 완료: {target_reserve_dt.strftime('%Y-%m-%d %H:%M')}")
+
             tag_input = page.locator("input[class*='tag_input'], input[placeholder*='태그']")
             if tags and tag_input.count():
                 for t in tags[:10]:
@@ -268,13 +303,21 @@ def run(md_file, publish=False, headless=True):
             confirm_btn.click(force=True)
             log("최종 [발행] 확인 버튼 클릭 완료, 페이지 이동 대기 중...")
             
-            # 실제 발행 완료(리다이렉트) 대기
+            # 실제 발행 / 예약 완료 대기
             try:
-                page.wait_for_url(lambda u: "postwrite" not in u and ("logNo=" in u or "PostView" in u), timeout=25000)
-                shot(page, "03_published.png", shots_dir)
-                final_url = page.url
-                log(f"🎉 네이버 블로그 최종 발행 완료! 확인 URL: {final_url}")
-                return title, final_url
+                if delay_hours > 0:
+                    page.wait_for_url(lambda u: "postwrite" not in u, timeout=25000)
+                    page.wait_for_timeout(3000)
+                    shot(page, "03_scheduled.png", shots_dir)
+                    final_url = f"https://blog.naver.com/{NAVER_BLOG_ID} (예약: {target_reserve_dt.strftime('%Y-%m-%d %H:%M')})"
+                    log(f"🎉 네이버 블로그 시간차 예약 발행 성공! (예약 시각: {target_reserve_dt.strftime('%Y-%m-%d %H:%M')})")
+                    return title, final_url
+                else:
+                    page.wait_for_url(lambda u: "postwrite" not in u and ("logNo=" in u or "PostView" in u), timeout=25000)
+                    shot(page, "03_published.png", shots_dir)
+                    final_url = page.url
+                    log(f"🎉 네이버 블로그 최종 발행 완료! 확인 URL: {final_url}")
+                    return title, final_url
             except Exception as wait_err:
                 shot(page, "03_publish_failed.png", shots_dir)
                 curr_url = page.url
@@ -301,6 +344,7 @@ if __name__ == "__main__":
     ap.add_argument("--md-file", required=True)
     ap.add_argument("--image", required=False, help="(호환용, 미사용: 본문 첫 이미지가 대표이미지가 됨)")
     ap.add_argument("--publish", action="store_true", help="실제 발행 (기본은 임시저장)")
+    ap.add_argument("--delay-hours", type=int, default=0, help="예약 발행 지연 시간(시간 단위, 0이면 즉시 발행)")
     ap.add_argument("--headed", action="store_true", help="브라우저 화면 표시")
     a = ap.parse_args()
-    run(a.md_file, publish=a.publish, headless=not a.headed)
+    run(a.md_file, publish=a.publish, headless=not a.headed, delay_hours=a.delay_hours)

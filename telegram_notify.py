@@ -84,22 +84,34 @@ def send_telegram_photo(photo_path, caption=""):
 
 def format_publish_success_message(published_posts):
     ts = datetime.now().strftime("%Y-%m-%d %H:%M")
+    has_scheduled = any(p.get("delay_hours", 0) > 0 or "예약" in p.get("url", "") for p in published_posts)
+    header_title = "🚀 *[네이버 블로그 시간차 예약 발행 완료]*" if has_scheduled else "🚀 *[네이버 블로그 일일 무인 발행 완료]*"
+    desc_text = f"총 {len(published_posts)}편의 포스트가 지정된 시간차로 네이버 블로그에 예약 등록되었습니다:\n" if has_scheduled else f"총 {len(published_posts)}편의 포스트가 정상 공개 발행되었습니다:\n"
+
     lines = [
-        f"🚀 *[네이버 블로그 일일 무인 발행 완료]*",
-        f"⏰ 발행 일시: {ts}",
-        f"총 {len(published_posts)}편의 포스트가 정상 공개 발행되었습니다:\n"
+        header_title,
+        f"⏰ 작업 일시: {ts}",
+        desc_text
     ]
     for i, p in enumerate(published_posts, 1):
         title = p.get("title", f"포스트 {i}")
         url = p.get("url", "#")
         category = p.get("category", "")
         reason = p.get("selection_reason", "")
+        delay = p.get("delay_hours", 0)
         lines.append(f"*{i}. {title}*")
+        if delay > 0:
+            lines.append(f"⏰ 발행 모드: {delay}시간 후 예약 발행")
+        elif "예약" in url:
+            lines.append(f"⏰ 발행 모드: {url.split('(')[-1].rstrip(')')}")
         if category:
             lines.append(f"🏷️ 카테고리: {category}")
         if reason:
             lines.append(f"📊 선별 사유: {reason}")
-        lines.append(f"👉 [블로그 보기]({url})\n")
+        if "http" in url:
+            lines.append(f"👉 [블로그 확인]({url})\n")
+        else:
+            lines.append(f"📌 {url}\n")
         
     lines.append("🏆 *스마트 큐레이션 엔진 무인 정상 가동 중*")
     return "\n".join(lines)

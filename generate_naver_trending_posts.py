@@ -172,7 +172,7 @@ for t in topics:
     마크다운 시작부터 끝까지 백틱 코드 블록(```markdown)으로 감싸지 말고 순수 마크다운 본문만 그대로 출력하세요.
     """
 
-    res = client.models.generate_content(model="gemini-3.5-flash-lite", contents=prompt)
+    res = client.models.generate_content(model="gemini-3.1-flash-lite", contents=prompt)
     article_md = res.text.strip()
 
     # 첫 줄 보정 (# 로 시작하도록)
@@ -202,7 +202,7 @@ for t in topics:
       }}
     }}
     """
-    m_res = client.models.generate_content(model="gemini-3.5-flash-lite", contents=meta_prompt)
+    m_res = client.models.generate_content(model="gemini-3.1-flash-lite", contents=meta_prompt)
     m_text = m_res.text.strip()
     if m_text.startswith("```"):
         m_text = m_text.split("\n", 1)[1].rsplit("\n", 1)[0].strip()

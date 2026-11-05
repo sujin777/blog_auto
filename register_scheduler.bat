@@ -14,7 +14,7 @@ echo (참고: 절전 모드에서도 스스로 깨어나 실행되도록 전원 
 echo.
 
 set TASK_NAME=AutoBlogRunnerDaily
-set SCRIPT_PATH=c:\DEV\261025_blog_auto\auto_run_complete.bat
+set SCRIPT_PATH=c:\DEV\10 month\261025_blog_auto\auto_run_complete.bat
 
 set RUN_TIME=06:00
 set /p USER_TIME="매일 실행할 시각을 입력하세요 (기본값: 06:00, 24시간 형식): "

@@ -11,7 +11,7 @@ echo   - 3단계: 네이버 블로그 스마트에디터 ONE 자동 업로드 �
 echo ========================================================
 echo.
 
-cd /d "c:\DEV\261025_blog_auto"
+cd /d "c:\DEV\10 month\261025_blog_auto"
 python -u auto_pipeline.py
 
 echo.

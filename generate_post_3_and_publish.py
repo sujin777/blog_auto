@@ -15,7 +15,7 @@ if sys.platform == "win32":
 from auto_pipeline import load_env, log, generate_with_retry, render_diagram_card
 from google import genai
 
-ROOT_DIR = r"c:\DEV\261025_blog_auto"
+ROOT_DIR = r"c:\DEV\10 month\261025_blog_auto"
 folder_path = os.path.join(ROOT_DIR, "output", "261102_1905")
 load_env()
 
@@ -61,7 +61,7 @@ def main():
         [출력 포맷 (반드시 순수 마크다운만 출력)]
         마크다운 시작부터 끝까지 백틱 코드 블록(```markdown)으로 감싸지 말고 순수 마크다운 본문만 그대로 출력하세요.
         """
-        res = generate_with_retry(client, prompt, model="gemini-3.5-flash-lite")
+        res = generate_with_retry(client, prompt, model="gemini-3.1-flash-lite")
         article_md = res.text.strip()
 
         clean_title = "".join(c for c in p["title"] if c.isalnum() or c in (" ", "_", "-")).strip()
@@ -94,7 +94,7 @@ def main():
         }}
         """
         try:
-            m_res = generate_with_retry(client, meta_prompt, model="gemini-3.5-flash-lite")
+            m_res = generate_with_retry(client, meta_prompt, model="gemini-3.1-flash-lite")
             m_text = m_res.text.strip()
             if m_text.startswith("```"):
                 m_text = m_text.split("\n", 1)[1].rsplit("\n", 1)[0].strip()

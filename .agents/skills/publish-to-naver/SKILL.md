@@ -22,8 +22,23 @@ description: Playwright를 사용하여 네이버 스마트에디터 ONE(SmartEd
 ### [단일 포스트 즉시 발행 예시]
 ```bash
 python .agents/skills/publish-to-naver/scripts/naver_publish.py \
-  --md-file "output/261025_0745/단일_에이전트_루프_아키텍처.md" \
-  --image "output/261025_0745/단일_에이전트_루프_아키텍처/single_agent_main.jpg"
+  --md-file "output/261025_0745/포스트_제목.md" \
+  --publish
+```
+
+### [단일 포스트 시간차 예약 발행 예시 (예: 2시간 뒤)]
+```bash
+python .agents/skills/publish-to-naver/scripts/naver_publish.py \
+  --md-file "output/261025_0745/포스트_제목.md" \
+  --delay-hours 2
+```
+
+### [3편 포스트 일괄 시간차 분산 예약 발행 (2, 4, 6시간 후)]
+```bash
+python .agents/skills/publish-to-naver/scripts/naver_publish_all.py \
+  --dir "output/261105_1937" \
+  --schedule \
+  --delays "2,4,6"
 ```
 
 ## 3. 핵심 아키텍처
@@ -34,3 +49,7 @@ python .agents/skills/publish-to-naver/scripts/naver_publish.py \
    - 본문 단락 블록, 인용구 블록, 소제목 서식 자동 적용
    - 로컬 이미지 파일들을 에디터에 순차 업로드
    - 태그 입력 및 최종 발행 버튼 클릭
+3. **시간차 네이티브 예약 발행 (Scheduled Publishing)**:
+   - 스마트에디터 ONE의 `[발행 시간: 예약]` 라디오 버튼 자동 활성화
+   - `input[class*='input_date']` 캘린더와 `select.hour_option`, `select.minute_option`(10분 단위)을 정확히 타겟팅하여 목표 시각으로 동적 세팅
+   - 1편: +2시간, 2편: +4시간, 3편: +6시간 등 하루 최적 트래픽 피크 타임에 맞추어 시간차 무인 분산 발행 보장

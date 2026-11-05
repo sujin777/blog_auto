@@ -12,7 +12,7 @@ if sys.platform == "win32":
 
 from telegram_notify import send_telegram_alert, format_publish_success_message, format_error_message
 
-ROOT_DIR = r"c:\DEV\261025_blog_auto"
+ROOT_DIR = r"c:\DEV\10 month\261025_blog_auto"
 folder_path = os.path.join(ROOT_DIR, "output", "261101_0807")
 
 def main():
