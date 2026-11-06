@@ -99,8 +99,11 @@ def format_publish_success_message(published_posts):
         category = p.get("category", "")
         reason = p.get("selection_reason", "")
         delay = p.get("delay_hours", 0)
+        target_time = p.get("target_time")
         lines.append(f"*{i}. {title}*")
-        if delay > 0:
+        if target_time:
+            lines.append(f"⏰ 발행 모드: [{target_time}] 네이버 블로그 예약 발행")
+        elif delay > 0:
             lines.append(f"⏰ 발행 모드: {delay}시간 후 예약 발행")
         elif "예약" in url:
             lines.append(f"⏰ 발행 모드: {url.split('(')[-1].rstrip(')')}")

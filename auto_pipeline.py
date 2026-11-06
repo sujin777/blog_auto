@@ -249,9 +249,31 @@ def run_step_2_generate_articles(folder_path):
             f.write(article_md)
         log(f"  ✍️ [{idx}/3] 블로그 포스트 본문 작성 완료 ({len(article_md)}자)")
 
+def check_and_prepare_session():
+    session_file = os.path.join(ROOT_DIR, ".agents", "skills", "publish-to-naver", "naver_session.json")
+    need_login = False
+    if not os.path.exists(session_file):
+        need_login = True
+    else:
+        try:
+            with open(session_file, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            cookies = data.get("cookies", [])
+            has_auth = any(c.get("name") == "NID_AUT" for c in cookies)
+            has_ses = any(c.get("name") == "NID_SES" for c in cookies)
+            if not (has_auth and has_ses):
+                need_login = True
+        except Exception:
+            need_login = True
+
+    if need_login:
+        log("🔑 [6시 네이버 세션 점검] 세션 갱신 필요 감지! QR 코드 로그인 엔진을 기동합니다...")
+        login_script = os.path.join(ROOT_DIR, ".agents", "skills", "publish-to-naver", "scripts", "naver_login.py")
+        subprocess.run([sys.executable, "-u", login_script], cwd=ROOT_DIR)
+
 def run_step_3_publish(folder_path, schedule=True):
     log("==================================================================")
-    log("🚀 [3단계] 네이버 블로그 스마트에디터 ONE 시간차 예약 발행 기동")
+    log("🚀 [3단계] 네이버 블로그 스마트에디터 ONE [07:00 / 08:00 / 10:00] 시간차 예약 발행")
     log("==================================================================")
     pub_script = os.path.join(ROOT_DIR, ".agents", "skills", "publish-to-naver", "scripts", "naver_publish_all.py")
     cmd = [
@@ -260,7 +282,7 @@ def run_step_3_publish(folder_path, schedule=True):
         "--interval", "8"
     ]
     if schedule:
-        cmd.extend(["--schedule", "--delays", "2,4,6"])
+        cmd.extend(["--schedule", "--target-times", "07:00,08:00,10:00"])
     else:
         cmd.append("--publish")
 
@@ -276,7 +298,7 @@ def run_step_3_publish(folder_path, schedule=True):
             pass
             
     if ret.returncode == 0:
-        log("🎉 모든 포스트 네이버 블로그 시간차 예약 발행 성공!")
+        log("🎉 모든 포스트 네이버 블로그 시간차 예약 발행 성공 (07:00, 08:00, 10:00)!")
     else:
         log(f"⚠️ 네이버 발행 스크립트 종료 코드: {ret.returncode}")
         
@@ -287,6 +309,7 @@ def main():
     log("🌟 [AI Blog Auto Runner] 스마트 큐레이션 전자동 블로그 파이프라인 시작")
     from telegram_notify import send_telegram_alert, format_publish_success_message, format_error_message
     try:
+        check_and_prepare_session()
         latest_folder = run_step_1_ingest()
         run_step_2_generate_articles(latest_folder)
         results = run_step_3_publish(latest_folder)

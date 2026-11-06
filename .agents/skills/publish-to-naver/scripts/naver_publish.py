@@ -123,14 +123,19 @@ def shot(page, name, shots_dir):
     log(f"📸 {path}")
 
 
-def run(md_file, publish=False, headless=True, delay_hours=0):
+def run(md_file, publish=False, headless=True, delay_hours=0, target_time=None):
     title, body, tags = parse_markdown(md_file)
     md_dir = os.path.dirname(os.path.abspath(md_file))
     shots_dir = os.path.join(md_dir, "naver_shots")
     os.makedirs(shots_dir, exist_ok=True)
     segments = split_segments(body, md_dir)
 
-    mode_str = f"예약 발행 ({delay_hours}시간 후)" if delay_hours > 0 else ("발행" if publish else "임시저장")
+    is_reservation = (delay_hours > 0) or (target_time is not None and str(target_time).strip() != "")
+    if is_reservation:
+        mode_str = f"예약 발행 (지정: {target_time})" if target_time else f"예약 발행 ({delay_hours}시간 후)"
+    else:
+        mode_str = "발행" if publish else "임시저장"
+
     log(f"블로그 ID: {NAVER_BLOG_ID} | 모드: {mode_str}")
     log(f"제목: {title}")
     log(f"태그 {len(tags)}개: {', '.join(tags[:10])}")
@@ -258,25 +263,46 @@ def run(md_file, publish=False, headless=True, delay_hours=0):
 
             # 시간차 예약 발행 설정
             target_reserve_dt = None
-            if delay_hours > 0:
-                log(f"⏰ [{delay_hours}시간 후] 시간차 예약 발행 옵션 설정 중...")
+            if is_reservation:
                 reserve_radio = page.locator("label:has-text('예약'), input[value='reserve'], [data-name='reserve']").first
                 reserve_radio.click()
                 page.wait_for_timeout(1000)
 
-                target_reserve_dt = datetime.now() + timedelta(hours=delay_hours)
-                rem = target_reserve_dt.minute % 10
-                if rem != 0:
-                    target_reserve_dt = target_reserve_dt + timedelta(minutes=(10 - rem))
+                now = datetime.now()
+                if target_time and ":" in str(target_time):
+                    th, tm = map(int, str(target_time).strip().split(":")[:2])
+                    # 분을 네이버 10분 단위 규격에 맞춤
+                    rem = tm % 10
+                    if rem != 0:
+                        tm = tm + (10 - rem)
+                        if tm >= 60:
+                            th += 1
+                            tm = 0
+                    target_reserve_dt = now.replace(hour=th, minute=tm, second=0, microsecond=0)
+                    if target_reserve_dt <= now:
+                        target_reserve_dt += timedelta(days=1)
+                    log(f"⏰ [고정 예약 시각 지정: {target_time}] ➔ {target_reserve_dt.strftime('%Y-%m-%d %H:%M')}")
+                elif delay_hours > 0:
+                    target_reserve_dt = now + timedelta(hours=delay_hours)
+                    rem = target_reserve_dt.minute % 10
+                    if rem != 0:
+                        target_reserve_dt = target_reserve_dt + timedelta(minutes=(10 - rem))
+                    log(f"⏰ [{delay_hours}시간 후 예약] ➔ {target_reserve_dt.strftime('%Y-%m-%d %H:%M')}")
+
                 hour_str = f"{target_reserve_dt.hour:02d}"
                 min_str = f"{target_reserve_dt.minute:02d}"
 
-                # 날짜가 익일로 넘어갈 경우 캘린더 선택
-                if target_reserve_dt.date() > datetime.now().date():
-                    log(f"  📅 예약 날짜가 익일({target_reserve_dt.strftime('%Y-%m-%d')})로 전환됩니다.")
+                # 날짜가 오늘과 다를 경우 캘린더 선택
+                if target_reserve_dt.date() != now.date():
+                    log(f"  📅 예약 날짜가 변경됩니다: {target_reserve_dt.strftime('%Y-%m-%d')}")
                     date_input = page.locator("input[class*='input_date']").first
                     date_input.click()
                     page.wait_for_timeout(800)
+                    if target_reserve_dt.month != now.month:
+                        next_btn = page.locator("button.ui-datepicker-next").first
+                        if next_btn.is_visible():
+                            next_btn.click()
+                            page.wait_for_timeout(500)
                     day_link = page.locator(f"table.ui-datepicker-calendar td:not(.ui-datepicker-other-month) a:has-text('{target_reserve_dt.day}')").first
                     if day_link.count():
                         day_link.click()
@@ -305,7 +331,7 @@ def run(md_file, publish=False, headless=True, delay_hours=0):
             
             # 실제 발행 / 예약 완료 대기
             try:
-                if delay_hours > 0:
+                if is_reservation:
                     page.wait_for_url(lambda u: "postwrite" not in u, timeout=25000)
                     page.wait_for_timeout(3000)
                     shot(page, "03_scheduled.png", shots_dir)
@@ -345,6 +371,7 @@ if __name__ == "__main__":
     ap.add_argument("--image", required=False, help="(호환용, 미사용: 본문 첫 이미지가 대표이미지가 됨)")
     ap.add_argument("--publish", action="store_true", help="실제 발행 (기본은 임시저장)")
     ap.add_argument("--delay-hours", type=int, default=0, help="예약 발행 지연 시간(시간 단위, 0이면 즉시 발행)")
+    ap.add_argument("--target-time", type=str, default=None, help="지정 시각 예약 발행 (예: '07:00', '08:00', '10:00')")
     ap.add_argument("--headed", action="store_true", help="브라우저 화면 표시")
     a = ap.parse_args()
-    run(a.md_file, publish=a.publish, headless=not a.headed, delay_hours=a.delay_hours)
+    run(a.md_file, publish=a.publish, headless=not a.headed, delay_hours=a.delay_hours, target_time=a.target_time)
