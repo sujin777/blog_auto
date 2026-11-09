@@ -303,10 +303,13 @@ def run(md_file, publish=False, headless=True, delay_hours=0, target_time=None):
                         if next_btn.is_visible():
                             next_btn.click()
                             page.wait_for_timeout(500)
-                    day_link = page.locator(f"table.ui-datepicker-calendar td:not(.ui-datepicker-other-month) a:has-text('{target_reserve_dt.day}')").first
-                    if day_link.count():
-                        day_link.click()
+                    day_btn = page.locator(".ui-datepicker td:not(.ui-state-disabled) button, .ui-datepicker td button, .ui-datepicker td a").filter(has_text=re.compile(rf"^{target_reserve_dt.day}$")).first
+                    if day_btn.count():
+                        day_btn.click()
                         page.wait_for_timeout(500)
+                        log(f"  📅 캘린더 날짜 클릭 완료: {target_reserve_dt.day}일 (입력값: {date_input.input_value()})")
+                    else:
+                        log(f"  ⚠️ 캘린더에서 {target_reserve_dt.day}일 버튼을 찾지 못했습니다!")
 
                 # 시간 및 분 선택
                 page.locator("select[class*='hour_option']").first.select_option(value=hour_str)

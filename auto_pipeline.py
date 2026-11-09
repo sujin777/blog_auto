@@ -305,14 +305,22 @@ def run_step_3_publish(folder_path, schedule=True):
     return published_results
 
 def main():
+    import argparse
+    parser = argparse.ArgumentParser(description="AI Blog Auto Pipeline")
+    parser.add_argument("--publish", action="store_true", help="즉시 발행 모드")
+    parser.add_argument("--schedule", action="store_true", default=True, help="시간차 예약 발행 모드 (07:00, 08:00, 10:00)")
+    args, _ = parser.parse_known_args()
+    is_schedule = not args.publish
+
     load_env()
-    log("🌟 [AI Blog Auto Runner] 스마트 큐레이션 전자동 블로그 파이프라인 시작")
+    mode_text = "시간차 예약 발행 (07:00, 08:00, 10:00)" if is_schedule else "즉시 발행"
+    log(f"🌟 [AI Blog Auto Runner] 스마트 큐레이션 전자동 블로그 파이프라인 시작 (모드: {mode_text})")
     from telegram_notify import send_telegram_alert, format_publish_success_message, format_error_message
     try:
         check_and_prepare_session()
         latest_folder = run_step_1_ingest()
         run_step_2_generate_articles(latest_folder)
-        results = run_step_3_publish(latest_folder)
+        results = run_step_3_publish(latest_folder, schedule=is_schedule)
         log("🏆 전체 무인 파이프라인이 성공적으로 완료되었습니다!")
         
         if results:
