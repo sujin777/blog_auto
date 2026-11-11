@@ -54,6 +54,7 @@ def main():
     print("=" * 60)
 
     results = []
+    failures = []
     for i, md_file in enumerate(md_files, 1):
         t_time = target_times_list[i - 1] if args.schedule and target_times_list and i - 1 < len(target_times_list) else None
         d_hr = delay_list[i - 1] if args.schedule and not t_time and delay_list and i - 1 < len(delay_list) else 0
@@ -68,6 +69,7 @@ def main():
             print(f"✅ [{i}/{len(md_files)}] 처리 완료!")
         except Exception as e:
             print(f"❌ [{i}/{len(md_files)}] 실패: {e}")
+            failures.append({"file": os.path.basename(md_file), "error": str(e)})
 
         if i < len(md_files):
             print(f"⏳ 다음 포스트까지 {args.interval}초 대기...")
@@ -78,7 +80,14 @@ def main():
     with open(result_json_path, "w", encoding="utf-8") as f:
         json.dump(results, f, ensure_ascii=False, indent=2)
 
-    print("\n🎉 모든 포스트 일괄 업로드 처리가 완료되었습니다!")
+    print(f"\n📋 발행 결과: 성공 {len(results)}편 / 실패 {len(failures)}편 (전체 {len(md_files)}편)")
+    if failures:
+        for f in failures:
+            print(f"   ❌ {f['file']}: {f['error']}")
+        print("⚠️ 일부 포스트가 발행되지 않았습니다. 워크플로를 실패로 종료합니다.")
+        sys.exit(1)
+
+    print("🎉 모든 포스트 일괄 업로드 처리가 완료되었습니다!")
 
 if __name__ == "__main__":
     main()

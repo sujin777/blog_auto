@@ -298,10 +298,14 @@ def run_step_3_publish(folder_path, schedule=True):
             pass
             
     if ret.returncode == 0:
-        log("🎉 모든 포스트 네이버 블로그 시간차 예약 발행 성공 (07:00, 08:00, 10:00)!")
+        log(f"🎉 모든 포스트 네이버 블로그 시간차 예약 발행 성공 ({len(published_results)}건 기록)")
     else:
-        log(f"⚠️ 네이버 발행 스크립트 종료 코드: {ret.returncode}")
-        
+        log(f"❌ 네이버 발행 실패 (종료 코드 {ret.returncode}) — 실제 발행 {len(published_results)}건")
+        raise RuntimeError(
+            f"네이버 블로그 발행 실패: 발행 {len(published_results)}건만 완료되어 파이프라인을 중단합니다. "
+            f"(네이버 세션 만료 여부를 확인해 주세요. publish 스크립트 종료 코드: {ret.returncode})"
+        )
+
     return published_results
 
 def main():
