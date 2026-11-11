@@ -4,4 +4,4 @@ requests
 markdown
 pyperclip
 pynacl
-
+beautifulsoup4
