@@ -58,7 +58,7 @@ jobs:
           mkdir -p .agents/skills/publish-to-naver
 
           # .env 파일 재구성
-          cat <<EOF > .env
+          cat << EOF > .env
           GEMINI_API_KEY=${GEMINI_API_KEY}
           APIFY_TOKEN_REDDIT=${APIFY_TOKEN_REDDIT}
           TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
